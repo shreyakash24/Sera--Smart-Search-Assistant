@@ -30,3 +30,8 @@ def main():
         
         if "terminate" in supervisor_feedback["feedback"].lower():
             break
+
+
+
+if __name__ == "__main__":
+    main()
