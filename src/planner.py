@@ -7,6 +7,80 @@ load_dotenv()
 HF_TOKEN=os.environ.get("HF_TOKEN4")
 BASE_URL = "https://api-inference.huggingface.co/models/"
 
+trial1="""You are a web automation task planner. You will receive tasks from the user. You will think step by step and break down the tasks into sequence of simple subtasks.
+    Return only in this format:
+    strictly a well-formatted JSON with 3 attributes.
+    The attributes will be as follows,
+    "step_id": This is an integer that represents the number of the step. It takes values starting from 1 and then increments for each step.
+    "step": This is a string that contains the step that reflects the activity to be performed on the browser to complete the task given by the user. It should be short, to the point.
+    "value": This is a string that contains the specific name of the objects in "step" required for it to be performed. This attribute only needs to be present when the names are mentioned explicitly or can be inferred.
+    Don't write any explanations or anything extra except the JSON for each step.
+    Your output should be consistent everytime the same task appears."""
+    
+trial2="""You are a web automation task planner. You will receive tasks from the user. You will think step by step and break down the tasks into sequence of simple subtasks.
+    Return only in this format:
+    strictly a well-formatted JSON with 3 attributes.
+    The attributes will be as follows,
+    "step_id": This is an integer that represents the number of the step. It takes values starting from 1 and then increments for each step.
+    "step": This is a string that contains the step that reflects the activity to be performed on the browser to complete the task given by the user. It should be short, to the point.
+    "value": This is a string that contains the selectors required for the "step" to be performed. This can be a link or any field or any particular text to be typed to execute the step or any other relevant entity. This attribute only needs to be present when it can be inferred.
+    If the user input explicitly or implicitly says to select "any" or "a random" item, assume the rule is to select the first available item in the list.
+    Don't write any explanations or anything extra except each subtask.
+    Your output should be consistent everytime the same task appears.
+
+    Example 1:
+    Task = Find the price of Adidas shoes
+    Output should be like,
+    [
+      {
+        "step_id": 1,
+        "step": "Navigate to Adidas website",
+        "value": "https://www.adidas.com/"
+      },
+      {
+        "step_id": 2,
+        "step": "Input the search term 'shoes' in the search bar",
+        "value": "shoes"
+      },
+      {
+        "step_id": 3,
+        "step": "click the 'search' button",
+        "value": "search"
+      },
+      {
+        "step_id": 4,
+        "step": "Select 'first' pair of shoes",
+        "value": "first"
+      },
+      {
+        "step_id": 5,
+        "step": "Identify their 'price'",
+        "value": "price"
+      }
+    ]
+
+    Example 2:
+    Task = I want to subscribe to the Times of India newsletter with the email 'abc@gmail.com'.
+    Output should be like,
+    [
+      {
+        "step_id": 1,
+        "step": "Navigate to Times of India website",
+        "value": "https://timesofindia.indiatimes.com/"
+      },
+      {
+        "step_id": 2,
+        "step": "Input the 'email' address into the newsletter 'subscription' field",
+        "value": "abc@gmail.com"
+      },
+      {
+        "step_id": 3,
+        "step": "Click the subscribe button",
+        "value": "subscribe"
+      }
+    ]
+    """
+    
 planner_system_prompt = """
 You are an AI Planner agent in a multi-agent web automation system. You will receive tasks from the user and break them down into logically sequenced subtasks suitable for execution by a PlayWright Executor. A Supervisor provides feedback that you must use to continue, replan, or backtrack.
 
@@ -55,7 +129,7 @@ EXAMPLES:
 """
 
 
-def hf_chat(model: str, messages: list):
+def model_call(model: str, messages: list):
     url=f"{BASE_URL}{model}"
     headers={"Authorization":f"Bearer {HF_TOKEN}"}
     payload={
@@ -77,13 +151,28 @@ def hf_chat(model: str, messages: list):
 
 def custom_generate(messages, config):
     model = config.get("model")
-    user_query = [m for m in messages if m["role"] == "Supervisor" and "metadata" in m and "from_user" in m["metadata"] and m["metadata"]["from_user"]==True][-1:]
-    system_msg = [{"role": "System", "content": planner_system_prompt}]
-    supervisor_msg = [m for m in messages if m["role"] == "Supervisor" and "metadata" in m and "from_user" in m["metadata"] and m["metadata"]["from_user"]==False][-1:]
-    planner_history = [m for m in messages if m["role"] == "Planner"][-10:]
-    messages = system_msg + user_query + supervisor_msg + planner_history
-
-    return hf_chat(model, messages)
+    user_query = [m for m in messages if m["role"] == "user"][-1:]
+    system_msg = [{"role": "system", "content": planner_system_prompt}]
+    supervisor_msg = [m for m in messages if m["role"] == "Supervisor"][-1:]
+    planner_history = [m["content"] for m in messages if m["role"] == "Planner"][-8:]
+    tree=""
+    site=""
+    for i in range(-1,-len(messages)-1,-1):
+      if messages[i]["role"]=="Executor":
+        tree=messages[i]["updated_tree"]
+        break
+    for i in range(-1,-len(messages)-1,-1):
+      if "details" in messages[i] and messages[i]["details"].get("url"):
+        site=messages[i]["details"]["url"]
+        break    
+    context =f"""
+          "site_url":{site},
+          "accessibility_tree":{tree},
+          "step_history":{planner_history},
+          "supervisor_feedback":{supervisor_msg}
+    """
+    messages = system_msg + user_query + [{"role":"assistant","content":context}]
+    return model_call(model, messages)
 
 
 planner= AssistantAgent(
