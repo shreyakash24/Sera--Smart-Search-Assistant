@@ -180,7 +180,6 @@ controller = BrowserController()
 import json
 
 def execute_actions(actions: dict):
-    # If actions is a string, parse it
     if isinstance(actions, str):
         try:
             actions = json.loads(actions)
@@ -212,3 +211,4 @@ print("executed")
 
 next_tree=controller.accesibility_tree()
 controller.close()
+
