@@ -1,5 +1,6 @@
 from autogen_agentchat.agents import AssistantAgent
 import os
+import json
 import requests
 from dotenv import load_dotenv
 
@@ -154,7 +155,13 @@ def custom_generate(messages, config):
     user_query = [m for m in messages if m["role"] == "user"][-1:]
     system_msg = [{"role": "system", "content": planner_system_prompt}]
     supervisor_msg = [m for m in messages if m["role"] == "Supervisor"][-1:]
-    planner_history = [m["content"] for m in messages if m["role"] == "Planner"][-8:]
+    planner_history = []
+    for i in range(-1,-len(messages)-1,-1):
+        if len(planner_history)==8:
+          break
+        if messages[i]["role"] == "Planner":
+                content_dict = json.loads(messages[i]["content"])
+                planner_history.append(content_dict)
     tree=""
     site=""
     for i in range(-1,-len(messages)-1,-1):
