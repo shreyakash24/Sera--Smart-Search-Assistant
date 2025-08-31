@@ -7,7 +7,7 @@ def main():
     messages=[]
     
     user_input=user.get("Enter your task:")
-    messages.append({"role": "User","content": user_input})
+    messages.append({"role": "user","content": user_input})
     
     while True:
         
