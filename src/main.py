@@ -7,26 +7,24 @@ def main():
     messages=[]
     
     user_input=user.get("Enter your task:")
-    messages.append({
-        "role": "Supervisor",
-        "content": user_input,
-        "metadata": {"from_user": True}
-    })
+    messages.append({"role": "User","content": user_input})
     
     while True:
         
         planner_output=planner.step(messages)
         messages.append({"role": "Planner", "content": planner_output})
+        print("----Planner-----")
+        print(planner_output)
         
         executor_output = executor.step(messages)
         messages.append({"role": "Executor", "content": executor_output})
-
+        print("----Executor-----")
+        print(executor_output)
+        
         supervisor_feedback = supervisor.step(messages)
-        messages.append({
-                "role": "Supervisor",
-                "content": supervisor_feedback,
-                "metadata": {"from_user": False}
-            })
+        messages.append({"role": "Supervisor","content": supervisor_feedback})
+        print("----Supervisor-----")
+        print(supervisor_feedback)
         
         if "terminate" in supervisor_feedback["feedback"].lower():
             break
