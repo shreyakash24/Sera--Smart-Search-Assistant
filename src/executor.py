@@ -237,7 +237,6 @@ controller = BrowserController()
 
 
 def execute_actions(actions: dict):
-    # If actions is a string, parse it
     controller.goto(url)
     if isinstance(actions, str):
          try:
@@ -268,4 +267,5 @@ print("executed")
 
 next_tree=controller.accesibility_tree()
 controller.close()
+
 
