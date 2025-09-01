@@ -1,4 +1,5 @@
 from autogen_agentchat.agents import AssistantAgent
+from helper import client_from_config
 import os
 import json
 import requests
@@ -153,7 +154,6 @@ def model_call(model: str, messages: list):
 def custom_generate(messages, config):
     model = config.get("model")
     user_query = [m for m in messages if m["role"] == "user"][-1:]
-    system_msg = [{"role": "system", "content": planner_system_prompt}]
     supervisor_msg = [m for m in messages if m["role"] == "Supervisor"][-1:]
     planner_history = []
     for i in range(-1,-len(messages)-1,-1):
@@ -178,15 +178,16 @@ def custom_generate(messages, config):
           "step_history":{planner_history},
           "supervisor_feedback":{supervisor_msg}
     """
-    messages = system_msg + user_query + [{"role":"assistant","content":context}]
+    messages = user_query + [{"role":"assistant","content":context}]
     return model_call(model, messages)
 
-
+planner_llm_config = {
+    "model": "Qwen/Qwen3-30B-A3B",
+    "custom_generate": custom_generate,
+    "temperature": 0,
+}      
 planner= AssistantAgent(
     name="Planner",
-    llm_config={
-        "model": "Qwen/Qwen3-30B-A3B",
-        "custom_generate": custom_generate,
-        "temperature": 0,
-    }
+    model_client=client_from_config(planner_llm_config),
+    system_message=planner_system_prompt
 )

@@ -1,12 +1,11 @@
-from src.user import user
-from src.planner import planner
-from src.executor import executor
-from src.supervisor import supervisor
+from planner import planner
+from executor import executor
+from supervisor import supervisor
 
 def main():
     messages=[]
     
-    user_input=user.get("Enter your task:")
+    user_input=input("Enter your task: ")
     messages.append({"role": "user","content": user_input})
     
     while True:
