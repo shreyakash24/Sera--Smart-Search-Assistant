@@ -2,9 +2,6 @@ from autogen_core.models import ChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent
 
 def client_from_config(llm_config: dict):
-    """
-    Converts old-style llm_config dict into a ChatCompletionClient compatible object.
-    """
     class GenericClient(ChatCompletionClient):
         def __init__(self):
             self.model = llm_config.get("model")
