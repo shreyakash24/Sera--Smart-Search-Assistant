@@ -1,6 +1,7 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
+from helper import client_from_config
 import json
 import traceback
 
@@ -152,7 +153,7 @@ Model Output:
 '''
 
 
-def executor_generate(messages,config):
+def executor_generate(agent, messages, sender, config):
     user_task=""
     accessibility_tree=""
     url=""
@@ -161,7 +162,8 @@ def executor_generate(messages,config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        accessibility_tree=messages[i]["content"]["updated_tree"]
+        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
+            accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
     
@@ -193,24 +195,27 @@ def executor_generate(messages,config):
         with open("accessibility_tree.json", "w", encoding="utf-8") as f:
             json.dump(snapshot, f, ensure_ascii=False, indent=2)
         browser.close()
-       
-       with open("accessibility_tree.json", "r", encoding="utf-8") as f:
-        new_tree = json.load(f)
 
        executor_feedback={
         "success_status":True,
         "error":False,
-        "updated_tree":new_tree,
+        # "updated_tree":new_tree,
         "step_id":step_id,
         "updated_url":url
        }
-       return executor_feedback
+       messages.append({
+        "role": agent.name,
+        "content": executor_feedback
+        })
+      #  print(messages)
+      #  print("done")
+       return True, {"role": agent.name, "content": executor_feedback}
     
     if fill_text!="":
        user_task=user_task + f"with text to type as {fill_text}"
     
     try:
-        
+        # print("started")
         cfg = config["config_list"][0]
 
         client = OpenAI(
@@ -220,15 +225,25 @@ def executor_generate(messages,config):
 
         completion = client.chat.completions.create(
             model=cfg["model"],         
-            messages=[
-                { 
+            messages=[ 
                     {"role": "system", "content": system_prompt},   
-                    {"role": "user","content": f"User Task: {user_task}\nDOM:\n{accessibility_tree}\n\n\nOutput:"}
-                }
+                    {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
             ]
         )
-
+        # print(completion)
+        # print("act")
+        # if completion and completion.choices:
+        #     choice = completion.choices[0]
+        #     message = getattr(choice, "message", None)
+        
+        #     if message and message.get("content"):
+        #         actions = message["content"]
+        #     else:
+        #         actions = "ERROR: Empty content from model"
+        # else:
+        #     actions = "ERROR: No choices in completion"
         actions = completion.choices[0].message.content
+        # print(actions)
         class BrowserController:
             def __init__(self):
                 self.playwright = sync_playwright().start()
@@ -266,7 +281,7 @@ def executor_generate(messages,config):
                 snapshot =  self.page.accessibility.snapshot()
                 
                 with open("accessibility_tree.json", "w", encoding="utf-8") as f:
-                    json.dump(snapshot, f, ensure_ascii=False, indent=2)
+                    json.dump(snapshot, f, ensure_ascii=False, indent=1)
             
             def get_url(self):
                 return self.page.url
@@ -312,24 +327,34 @@ def executor_generate(messages,config):
             Error_fb=feedback
         
         controller.accesibility_tree()
-        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
-            next_tree = json.load(f)
         
         next_url=controller.get_url()
         controller.get_ss("post_ss.png")
         controller.close()
-        
+        print("here")
         executor_feedback={
             "step_id":step_id,
             "success_status":success_fb,
             "error":Error_fb,
-            "updated_tree":next_tree,
+            # "updated_tree":next_tree,
             "updated_url":next_url
         }
-        return executor_feedback
+        messages.append({
+        "role": agent.name,
+        "content": executor_feedback
+        })
+        # print(messages)
+        return True,{
+        "role": agent.name,
+        "content": executor_feedback
+        }
 
     except Exception as e:
-        return f"Executor generate failed: {e}\n{traceback.format_exc()}"
+        return True, {
+            "role": agent.name,
+            "content": f"Executor generate failed: {e}\n{traceback.format_exc()}"
+        }
+
 
 executor = AssistantAgent(
     name="executor",
@@ -337,10 +362,26 @@ executor = AssistantAgent(
     "config_list": [
         {
             "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
-    ],
-    "custom_generate": executor_generate,
-    },
+    ]
+    }
 )
+executor_llm_config=executor.llm_config
+executor.register_reply(
+    trigger=lambda sender: True,
+    reply_func=executor_generate,
+    config=executor_llm_config # Pass the config here
+)
+# Search for pendrive with usb3.2 256gb storage
+# https://www.amazon.in/
+# messages=[]
+# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
+# planner_output=json.dumps(planner_output)
+# user_input = input("Enter your task: ")
+# messages.append({"role": "user", "content": user_input})
+# messages.append({"role":"Planner","content":planner_output})
+# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
+# executor_output = executor.generate_reply(messages)
+# print(executor_output)
