@@ -9,19 +9,19 @@ def main():
     messages.append({"role": "user","content": user_input})
     
     while True:
-        
+        print(messages)
         planner_output=planner.generate_reply(messages=messages, sender=supervisor)
-        messages.append(planner_output)
+        messages.append({"role": "planner", "content":planner_output})
         print("----Planner-----")
         print(planner_output)
-        
+        print(messages)
         executor_output = executor.generate_reply(messages=messages, sender=supervisor)
-        messages.append(executor_output)
+        messages.append({"role": "executor", "content":executor_output})
         print("----Executor-----")
         print(executor_output)
         
         supervisor_feedback = supervisor.generate_reply(messages=messages, sender=supervisor)
-        messages.append(supervisor_feedback)
+        messages.append({"role": "supervisor", "content":supervisor_feedback})
         print("----Supervisor-----")
         print(supervisor_feedback)
         
