@@ -1,8 +1,9 @@
-from autogen_agentchat.agents import AssistantAgent
+from autogen import AssistantAgent
 from helper import client_from_config
 import os
 import json
 import requests
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -131,25 +132,7 @@ EXAMPLES:
 """
 
 
-def model_call(model: str, messages: list):
-    url=f"{BASE_URL}{model}"
-    headers={"Authorization":f"Bearer {HF_TOKEN}"}
-    payload={
-        "model": model,
-        "messages": messages
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
-    result = response.json()
-    
-    full_output = result["choices"][0]["message"]["content"]
-    _, sep, after = full_output.partition("</think>")
-    if sep:  
-        clean_output = after.strip()
-    else:   
-        clean_output = full_output.strip()
 
-    return clean_output
 
 def custom_generate(messages, config):
     model = config.get("model")
@@ -179,15 +162,36 @@ def custom_generate(messages, config):
           "supervisor_feedback":{supervisor_msg}
     """
     messages = user_query + [{"role":"assistant","content":context}]
-    return model_call(model, messages)
+    cfg = config["config_list"][0]
 
-planner_llm_config = {
-    "model": "Qwen/Qwen3-30B-A3B",
-    "custom_generate": custom_generate,
-    "temperature": 0,
-}      
-planner= AssistantAgent(
-    name="Planner",
-    model_client=client_from_config(planner_llm_config),
-    system_message=planner_system_prompt
+    client = OpenAI(
+        base_url=cfg["base_url"],   
+        api_key=cfg["api_key"],
+    )
+    completion = client.chat.completions.create(
+        model=cfg["model"],         
+        messages=[
+            { 
+                {"role": "system", "content": planner_system_prompt},   
+                {"role":"assistant","content":context},
+                {"role":"user","content":user_query}
+            }
+        ]
+    )
+    actions = completion.choices[0].message.content
+    return actions
+
+
+planner = AssistantAgent(
+    name="planner",
+    llm_config= {
+    "config_list": [
+        {
+            "model": "qwen/qwen3-30b-a3b:free",  
+            "api_key": "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",
+            "base_url": "https://openrouter.ai/api/v1"
+        }
+    ],
+    "custom_generate":custom_generate
+    }
 )
