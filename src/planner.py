@@ -166,9 +166,9 @@ def model_call(model: str, messages: list):
     else:   
         clean_output = full_output.strip()
 
-    return clean_output
+    return {"role": "planner", "content": clean_output}
 
-def custom_generate(messages, config):
+def custom_generate(recipient, messages, sender, config):
     model = config["config_list"][0]
     user_query = [m for m in messages if m["role"] == "user"][-1:]
     supervisor_msg = [m for m in messages if m["role"] == "Supervisor"][-1:]
@@ -218,11 +218,14 @@ planner = AssistantAgent(
             "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }],
-    "temperature": 0,
-    "custom_generate":custom_generate
+    "temperature": 0
     }
 )
-
+planner.register_reply(
+    reply_func=custom_generate,
+    position=1,
+    trigger="*"
+)
 
 
 

@@ -10,22 +10,22 @@ def main():
     
     while True:
         
-        planner_output=planner.generate_reply(messages)
-        messages.append({"role": "Planner", "content": planner_output})
+        planner_output=planner.generate_reply(messages=messages, sender=supervisor)
+        messages.append(planner_output)
         print("----Planner-----")
         print(planner_output)
         
-        executor_output = executor.generate_reply(messages)
-        messages.append({"role": "Executor", "content": executor_output})
+        executor_output = executor.generate_reply(messages=messages, sender=supervisor)
+        messages.append(executor_output)
         print("----Executor-----")
         print(executor_output)
         
-        supervisor_feedback = supervisor.generate_reply(messages)
-        messages.append({"role": "Supervisor","content": supervisor_feedback})
+        supervisor_feedback = supervisor.generate_reply(messages=messages, sender=supervisor)
+        messages.append(supervisor_feedback)
         print("----Supervisor-----")
         print(supervisor_feedback)
         
-        if "terminate" in supervisor_feedback["feedback"].lower():
+        if "true" in supervisor_feedback["is_terminate"].lower():
             break
 
 
