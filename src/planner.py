@@ -134,7 +134,7 @@ EXAMPLES:
 
 
 
-def custom_generate(agent, messages, sender, config):
+def custom_generate(messages, config):
     model = config.get("model")
     user_query = [m for m in messages if m["role"] == "user"][-1:]
     supervisor_msg = [m for m in messages if m["role"] == "Supervisor"][-1:]
@@ -191,13 +191,7 @@ planner = AssistantAgent(
             "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
-    ]
+    ],
+    "custom_generate":custom_generate
     }
 )
-planner_config = planner.llm_config
-planner.register_reply(
-    trigger=lambda sender:True,  
-    reply_func=custom_generate,
-    config=planner_config
-)
-
