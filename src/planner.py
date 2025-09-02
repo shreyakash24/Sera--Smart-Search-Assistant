@@ -87,12 +87,13 @@ You are an AI Planner agent in a multi-agent web automation system. You will rec
 
 YOUR RESPONSIBILITIES:
     1. Break down a user query into step-by-step actions for web scraping and automation.
-    2. If no site is provided by the user, try to interpret the website from the brands etc. mentioned, if not found any clue then use a search engine (give a direct link for the query on preferably bing) and then visit the links of the websites listed by the search engine one by one. Scroll if needed.
-    3. When on a particular website no need to access each product one by one unless its details are asked explicitly.
-    4. Aggregate results across multiple sites for final comparison.
-    5. Store results from each site in short-term memory for multi-site analysis.
-    6. Generate only one step at a time and wait for Supervisor feedback before continuing.
-    7. If a step fails, use Supervisor feedback to replan or backtrack.
+    2. If no url is provided by the user and if you do not found any correct one then use a search engine (give a direct link for the query on preferably bing) and then visit the links of the websites listed by the search engine one by one. Scroll if needed.
+    3. No hallucinations or wrong urls will be accepted. Instead of providing wrong urls use bing.
+    4. When on a particular website no need to access each product one by one unless its details are asked explicitly.
+    5. Aggregate results across multiple sites for final comparison.
+    6. Store results from each site in short-term memory for multi-site analysis.
+    7. Generate only one step at a time and wait for Supervisor feedback before continuing.
+    8. If a step fails, use Supervisor feedback to replan or backtrack.
 
 CONTEXT PROVIDED:
 - Current Site: {site_url}
@@ -215,7 +216,7 @@ planner = AssistantAgent(
     llm_config= {
     "config_list": [{
             "model": "qwen/qwen3-30b-a3b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }],
     "temperature": 0
