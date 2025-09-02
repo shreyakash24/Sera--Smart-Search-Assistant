@@ -16,12 +16,12 @@ def main():
         print(planner_output)
         
         executor_output = executor.generate_reply(messages)
-        messages.append({"role": "Executor", "content": executor_output})
+        # messages.append({"role": "Executor", "content": executor_output})
         print("----Executor-----")
         print(executor_output)
         
         supervisor_feedback = supervisor.generate_reply(messages)
-        messages.append({"role": "Supervisor","content": supervisor_feedback})
+        # messages.append({"role": "Supervisor","content": supervisor_feedback})
         print("----Supervisor-----")
         print(supervisor_feedback)
         
