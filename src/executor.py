@@ -1,6 +1,7 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
+from helper import client_from_config
 import json
 import traceback
 
@@ -168,21 +169,32 @@ def executor_generate(agent, messages, sender, config):
     
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Planner":
-        content=json.loads(messages[i]["content"])
-        step_id=content["step_id"]
-        user_task=content["step"]
-        operation=content["operation"]
+        raw_content = messages[i]["content"]
+        if isinstance(raw_content, str):
+            content = json.loads(raw_content)
+        else :
+            content = raw_content
+        step_id = content.get("step_id")
+        user_task = content.get("step")
+        operation = content.get("operation")
         break
     
-    for i in range(-1,-len(messages)-1,-1):
-      if messages[i]["role"]=="Planner" and "details" in json.loads(messages[i]["content"]):
-         content=json.loads(messages[i]["content"])
-
-         if "url" in content["details"]:
-            url=content["details"]["url"]
-         
-         if "text" in content["details"]:
-            fill_text=content["details"]["text"]
+    for i in range(-1, -len(messages) - 1, -1):
+      if messages[i]["role"] == "Planner":
+          try:
+              content = json.loads(messages[i]["content"])  
+          except json.JSONDecodeError as e:
+              print("JSON decode error:", e, messages[i]["content"])
+              continue
+  
+          details = content.get("details", {})
+  
+          if "url" in details:
+              url = details["url"]
+          if "text" in details:
+              fill_text = details["text"]
+  
+          break
     
     if operation=="navigate":
        with sync_playwright() as p:
@@ -192,7 +204,7 @@ def executor_generate(agent, messages, sender, config):
         snapshot = page.accessibility.snapshot()
         
         with open("accessibility_tree.json", "w", encoding="utf-8") as f:
-            json.dump(snapshot, f, ensure_ascii=False, indent=2)
+            json.dump(snapshot, f, ensure_ascii=False, indent=1)
         browser.close()
 
        executor_feedback={
@@ -202,10 +214,7 @@ def executor_generate(agent, messages, sender, config):
         "step_id":step_id,
         "updated_url":url
        }
-       messages.append({
-        "role": agent.name,
-        "content": executor_feedback
-        })
+
       #  print(messages)
       #  print("done")
        return True, {"role": agent.name, "content": executor_feedback}
@@ -338,10 +347,7 @@ def executor_generate(agent, messages, sender, config):
             # "updated_tree":next_tree,
             "updated_url":next_url
         }
-        messages.append({
-        "role": agent.name,
-        "content": executor_feedback
-        })
+
         # print(messages)
         return True,{
         "role": agent.name,
@@ -355,32 +361,21 @@ def executor_generate(agent, messages, sender, config):
         }
 
 
-executor = AssistantAgent(
-    name="executor",
+Executor = AssistantAgent(
+    name="Executor",
     llm_config= {
     "config_list": [
         {
             "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]
     }
 )
-executor_llm_config=executor.llm_config
-executor.register_reply(
+executor_llm_config=Executor.llm_config
+Executor.register_reply(
     trigger=lambda sender: True,
     reply_func=executor_generate,
     config=executor_llm_config # Pass the config here
 )
-# Search for pendrive with usb3.2 256gb storage
-# https://www.amazon.in/
-# messages=[]
-# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
-# planner_output=json.dumps(planner_output)
-# user_input = input("Enter your task: ")
-# messages.append({"role": "user", "content": user_input})
-# messages.append({"role":"Planner","content":planner_output})
-# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
-# executor_output = executor.generate_reply(messages)
-# print(executor_output)
