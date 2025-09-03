@@ -176,8 +176,8 @@ def supervisor_generate(agent, messages, sender, config):
         "content": feedback
         }
 
-supervisor = AssistantAgent(
-    name="supervisor",
+Supervisor = AssistantAgent(
+    name="Supervisor",
     llm_config={
         "config_list": [
             {
@@ -194,12 +194,10 @@ supervisor = AssistantAgent(
     }
 )
 
-supervisor_llm_config=supervisor.llm_config
-supervisor.register_reply(
+supervisor_llm_config=Supervisor.llm_config
+Supervisor.register_reply(
     trigger=lambda sender: True,
     reply_func=supervisor_generate,
     config=supervisor_llm_config # Pass the config here
 )
-
-
 
