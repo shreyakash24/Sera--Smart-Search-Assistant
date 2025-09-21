@@ -426,7 +426,6 @@
 # )
 
 from autogen import AssistantAgent
-from helper import client_from_config
 import os
 import json
 import requests
@@ -528,7 +527,7 @@ CONTEXT PROVIDED:
 - Accessibility Tree: {accessibility_tree}
 - User Goal: {user_query}
 - Step History: [{"step_id", "step", "operation", "target", "details"}]
-- Supervisor Feedback: [{"step_id", "success_status", "error"}]
+- Supervisor Feedback: [{"success":True/False, "reasoning","expected_vs_actual","is_terminate"}]
 
 STEP REQUIREMENTS:
 - Be specific and actionable (include URLs, exact text)
@@ -574,13 +573,16 @@ def custom_generate(agent, messages, sender, config):
                 planner_history.append(content_dict)
     tree=""
     site=""
-    for i in range(-1,-len(messages)-1,-1):
+    '''for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
         tree=messages[i]["updated_tree"]
-        break
+        break'''
+    file = open("src/accessibility_tree.json", "r")
+    tree=file.read()  
+    file.close()
     for i in range(-1,-len(messages)-1,-1):
-      if "details" in messages[i] and messages[i]["details"].get("url"):
-        site=messages[i]["details"]["url"]
+      if "details" in messages[i] and messages[i]["details"].get("updated_url"):
+        site=messages[i]["details"]["updated_url"]
         break    
     context =f"""
           "site_url":{site},
@@ -609,7 +611,7 @@ def custom_generate(agent, messages, sender, config):
     actions = completion.choices[0].message.content
     new_acts = ast.literal_eval(actions)
     # print(new_acts)
-    if "details" in new_acts:
+    if "details" in new_acts and "url" in "details":
        urll=new_acts["details"]["url"]
        urll=urll+"/"
        new_acts["details"]["url"]=urll

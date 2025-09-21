@@ -1,7 +1,6 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
-from helper import client_from_config
 import json
 import traceback
 
@@ -162,7 +161,7 @@ def executor_generate(agent, messages, sender, config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
+        with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
             accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
@@ -288,7 +287,7 @@ def executor_generate(agent, messages, sender, config):
             def accesibility_tree(self):
                 snapshot =  self.page.accessibility.snapshot()
                 
-                with open("accessibility_tree.json", "w", encoding="utf-8") as f:
+                with open("src/accessibility_tree.json", "w", encoding="utf-8") as f:
                     json.dump(snapshot, f, ensure_ascii=False, indent=1)
             
             def get_url(self):
@@ -367,7 +366,7 @@ Executor = AssistantAgent(
     "config_list": [
         {
             "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]

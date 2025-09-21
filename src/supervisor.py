@@ -183,12 +183,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             },
             {
                 "model": "deepseek/deepseek-r1-0528:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
         ]
     }
