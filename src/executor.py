@@ -1,6 +1,7 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
+from helper import client_from_config
 import json
 import traceback
 
@@ -70,9 +71,9 @@ Format:
   "target": {
     "role": "...",
     "name": "...",
-    "value":"..."{if any*}
     "description": "..."{if there*}
   },
+  "value":"..."{if any*}
   "reason": "Explain why this element matches the user task",
    }
         
@@ -161,7 +162,7 @@ def executor_generate(agent, messages, sender, config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
+        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
             accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
@@ -181,7 +182,7 @@ def executor_generate(agent, messages, sender, config):
     for i in range(-1, -len(messages) - 1, -1):
       if messages[i]["role"] == "Planner":
           try:
-              content = json.loads(messages[i]["content"])  
+              content = json.loads(messages[i]["content"])  # parse JSON string
           except json.JSONDecodeError as e:
               print("JSON decode error:", e, messages[i]["content"])
               continue
@@ -193,7 +194,7 @@ def executor_generate(agent, messages, sender, config):
           if "text" in details:
               fill_text = details["text"]
   
-          break
+          break  # stop at the most recent Planner step
     
     if operation=="navigate":
        with sync_playwright() as p:
@@ -258,6 +259,7 @@ def executor_generate(agent, messages, sender, config):
                 self.page = self.browser.new_page()
         
             def goto(self, url: str):
+                self.page.wait_for_timeout(4000)
                 self.page.goto(url)
         
             def perform_action(self, action: dict):
@@ -267,14 +269,25 @@ def executor_generate(agent, messages, sender, config):
                 name = target.get("name")
         
                 if act == "type":
+                    option_value = action.get("value")
+                    if url=="https://www.bing.com"  or "https://bing.com":
+                        # print("gone")
+                        self.page.wait_for_timeout(3000)
+                        self.page.keyboard.type(option_value)
+                        self.page.wait_for_timeout(2000)
+                        self.page.keyboard.press("Enter")
+                        self.page.wait_for_timeout(3000)
+                        return
+                    print("not gone")
                     locator = self.page.get_by_role(role, name=name)
                     locator.click(force=True)
-                    option_value = action.get("value")
+                    
                     locator.wait_for(state="visible")
                     self.page.keyboard.type(option_value)
                 elif act == "click":
-                    locator = self.page.get_by_role(role, name=name)
+                    locator = self.page.get_by_role(role, name=name).first
                     locator.click(force=True)
+                    self.page.wait_for_timeout(5000)
                 elif act in ["select", "choose", "check"]:
                     locator = self.page.get_by_role(role, name=name)
                     option_value = action.get("value")
@@ -287,13 +300,15 @@ def executor_generate(agent, messages, sender, config):
             def accesibility_tree(self):
                 snapshot =  self.page.accessibility.snapshot()
                 
-                with open("src/accessibility_tree.json", "w", encoding="utf-8") as f:
+                with open("accessibility_tree.json", "w", encoding="utf-8") as f:
                     json.dump(snapshot, f, ensure_ascii=False, indent=1)
             
             def get_url(self):
+                # self.page.wait_for_timeout(5000)
                 return self.page.url
             
             def get_ss(self,path:str):
+               self.page.wait_for_timeout(3000)
                self.page.screenshot(path=path, full_page=True)
         
             def close(self):
@@ -307,6 +322,7 @@ def executor_generate(agent, messages, sender, config):
         
         def execute_actions(url: str, actions: dict):
             controller.goto(url)
+            controller.get_ss("pre_ss.png")
         
             if isinstance(actions, str):
                 try:
@@ -365,8 +381,8 @@ Executor = AssistantAgent(
     llm_config= {
     "config_list": [
         {
-            "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "model": "x-ai/grok-4-fast:free",  
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]
@@ -378,3 +394,14 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config # Pass the config here
 )
+# Search for pendrive with usb3.2 256gb storage
+# https://www.amazon.in/
+# messages=[]
+# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
+# planner_output=json.dumps(planner_output)
+# user_input = input("Enter your task: ")
+# messages.append({"role": "user", "content": user_input})
+# messages.append({"role":"Planner","content":planner_output})
+# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
+# executor_output = executor.generate_reply(messages)
+# print(executor_output)
