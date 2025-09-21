@@ -142,8 +142,8 @@ def supervisor_generate(agent, messages, sender, config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Research\pre_ss.png"
-    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Research\post_ss.png"
+    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
+    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
@@ -167,13 +167,14 @@ def supervisor_generate(agent, messages, sender, config):
         ]
     )
     feedback=completion.choices[0].message.content
+    dict_feedback=json.loads(feedback)
     messages.append({
         "role": agent.name,
-        "content": feedback
+        "content": dict_feedback
         })
     return True,{
         "role": agent.name,
-        "content": feedback
+        "content": dict_feedback
         }
 
 Supervisor = AssistantAgent(
@@ -183,12 +184,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             },
             {
-                "model": "deepseek/deepseek-r1-0528:free",
+                "model": "qwen/qwen3-4b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
         ]
     }
@@ -198,6 +199,6 @@ supervisor_llm_config=Supervisor.llm_config
 Supervisor.register_reply(
     trigger=lambda sender: True,
     reply_func=supervisor_generate,
-    config=supervisor_llm_config # Pass the config here
+    config=supervisor_llm_config 
 )
 
