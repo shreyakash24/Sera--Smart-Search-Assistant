@@ -1,6 +1,7 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
+from helper import client_from_config
 import json
 import traceback
 
@@ -161,7 +162,7 @@ def executor_generate(agent, messages, sender, config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
+        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
             accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
@@ -251,6 +252,7 @@ def executor_generate(agent, messages, sender, config):
         #     actions = "ERROR: No choices in completion"
         actions = completion.choices[0].message.content
         # print(actions)
+        extract=[]
         class BrowserController:
             def __init__(self):
                 self.playwright = sync_playwright().start()
@@ -277,7 +279,7 @@ def executor_generate(agent, messages, sender, config):
                         self.page.keyboard.press("Enter")
                         self.page.wait_for_timeout(3000)
                         return
-                    print("not gone")
+                    # print("not gone")
                     locator = self.page.get_by_role(role, name=name)
                     locator.click(force=True)
                     
@@ -287,6 +289,15 @@ def executor_generate(agent, messages, sender, config):
                     locator = self.page.get_by_role(role, name=name).first
                     locator.click(force=True)
                     self.page.wait_for_timeout(5000)
+                  
+                elif act=="read":
+                    option_value = action.get("value")
+                    generated={
+                        "link":option_value,
+                        "name":name
+                    }
+                    extract.append(generated)
+                    
                 elif act in ["select", "choose", "check"]:
                     locator = self.page.get_by_role(role, name=name)
                     option_value = action.get("value")
@@ -359,7 +370,8 @@ def executor_generate(agent, messages, sender, config):
             "success_status":success_fb,
             "error":Error_fb,
             # "updated_tree":next_tree,
-            "updated_url":next_url
+            "updated_url":next_url,
+            "extract":extract
         }
 
         # print(messages)
