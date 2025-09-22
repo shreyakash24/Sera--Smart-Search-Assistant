@@ -85,12 +85,12 @@ You are an AI Planner agent in a multi-agent web automation system. You will rec
 
 YOUR RESPONSIBILITIES:
     1. Break down a user query into step-by-step actions for web scraping and automation.
-    2. If no site is provided by the user, try to interpret the website from the brands etc. mentioned, if not found any clue then use a search engine (preferably precise link for the query on bing) and then visit the links of the websites listed by the search engine one by one. Scroll if needed.
+    2. If no site url or name is provided by the user, then use a search engine (preferably precise link for the query on bing) and then visit the links of the websites listed by the search engine one by one. Scroll if needed.
     3. When on a particular website no need to access each product one by one unless its details are asked explicitly.
     4. Aggregate results across multiple sites for final comparison.
     5. Store results from each site in short-term memory for multi-site analysis.
     6. Generate only one step at a time and wait for Supervisor feedback before continuing.
-    7. If a step fails, use Supervisor feedback to replan or backtrack.
+    7. If the supervisor tells that a step fails, use Supervisor feedback to replan (and backtrack if needed).
 
 CONTEXT PROVIDED:
 - Current Site: {site_url}
@@ -105,7 +105,7 @@ STEP REQUIREMENTS:
 - Playwright-compatible operations (like navigate, click, fill, extract, scroll, select)
 
 OUTPUT FORMAT:
-    - Strictly a JSON object (curly brackets) in single line.
+    - Strictly a correct JSON object (curly brackets) in single line. 
     - If the user query requests "any" or "random" items, return details of all available items.
     - No explanations or extra text.
     - Output must be consistent for repeated tasks.
@@ -143,7 +143,6 @@ def model_call(model: str, messages: list):
         clean_output = after.strip()
     else:   
         clean_output = full_output.strip()
-    
     return True, {"role": "planner", "content": clean_output}
 
 
