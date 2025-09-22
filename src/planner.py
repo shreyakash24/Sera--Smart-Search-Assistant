@@ -143,7 +143,7 @@ def model_call(model: str, messages: list):
         clean_output = after.strip()
     else:   
         clean_output = full_output.strip()
-    print("clean\n"+clean_output,"full\n"+full_output)
+    
     return True, {"role": "planner", "content": clean_output}
 
 
@@ -180,7 +180,7 @@ def planner_generate(recipient, messages, sender, config):
           "supervisor_feedback":{supervisor_msg}
     """
     messages = system_prompt + user_query + [{"role":"user","content":context}]
-    print(messages)
+
     return model_call(model, messages)
 
 
