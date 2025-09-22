@@ -97,11 +97,11 @@ CONTEXT PROVIDED:
 - Accessibility Tree: {accessibility_tree}
 - User Goal: {user_query}
 - Step History: [{"step_id", "step", "operation", "target", "details"}]
-- Supervisor Feedback: [{"success":True/False, "reasoning","expected_vs_actual","is_terminate"}]
+- Supervisor Feedback: [{"step_id", "success_status", "error"}]
 
 STEP REQUIREMENTS:
 - Be specific and actionable (include URLs, exact text)
-- One atomic action per step
+- ONLY ONE atomic action per step
 - Playwright-compatible operations (like navigate, click, fill, extract, scroll, select)
 
 OUTPUT FORMAT:
@@ -122,7 +122,7 @@ OUTPUT FORMAT:
 }
 
 EXAMPLES:
-{"step_id": 1,"step": "Navigate to Amazon homepage","operation": "navigate","target": "Amazon main page","details": {"url": "https://amazon.com/"}}
+{"step_id": 1,"step": "Navigate to Amazon homepage","operation": "navigate","target": "Amazon main page","details": {"url": "https://amazon.com"}}
 
 {"step_id": 3,"step": "Extract price of first search result","operation": "extract","target": "first product","details": {"data_type": ["price"]}}
 """
@@ -143,8 +143,8 @@ def model_call(model: str, messages: list):
         clean_output = after.strip()
     else:   
         clean_output = full_output.strip()
-
-    return clean_output, {"role": "planner", "content": full_output}
+    print("clean\n"+clean_output,"full\n"+full_output)
+    return True, {"role": "planner", "content": clean_output}
 
 
 def planner_generate(recipient, messages, sender, config):
@@ -175,10 +175,12 @@ def planner_generate(recipient, messages, sender, config):
     context =f"""
           "site_url":{site},
           "accessibility_tree":{tree},
+          "user goal":{user_query[0]["content"]},
           "step_history":{planner_history},
           "supervisor_feedback":{supervisor_msg}
     """
-    messages = system_prompt + user_query + [{"role":"assistant","content":context}]
+    messages = system_prompt + user_query + [{"role":"user","content":context}]
+    print(messages)
     return model_call(model, messages)
 
 
