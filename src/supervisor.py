@@ -52,7 +52,8 @@ Don't output anything else than this format.
 }
 
 ## Important Rules
-- If the action did not produce the expected outcome, mark `"success": false`.  
+- If the action did not produce the expected outcome, mark `"success": false`. 
+- For subtask like extracting,reading from a webpage would have no change in UI so always give "success":True,but only terminate  if the main user task was completed or no,after extraction or reading?
 - Be objective. Do not assume success unless the evidence clearly supports it.  
 - Use precise reasoning, not vague statements.  
 - Keep reasoning concise but logical. 
@@ -142,8 +143,8 @@ def supervisor_generate(agent, messages, sender, config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"pre_ss.png"
-    image2 = r"post_ss.png"
+    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
+    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
@@ -184,12 +185,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             },
             {
-                "model": "qwen/qwen3-4b:free",
+                "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
         ]
     }
