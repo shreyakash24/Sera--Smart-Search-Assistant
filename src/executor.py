@@ -63,6 +63,8 @@ operation to perform and which element to target.
 -For date selection,no of people,entities selection,etc always click first.
 VeryIMP:The selected action should not contain role as 'text leaf' as it cannot be interacted with,unless the task is of just read or extract,
         else for interaction u should look for 'textbox' instead. For elements with almost same name and meaning having both textleaf and textbox ,always select the textbox. 
+IMP: If the selected action contains interacting with text leaf always prioritize textbox first ,if textbox not present do interact using textleaf*
+
 Always output in proper JSON format only ,so it can be used afterwards using json.loads().
 Strictly follow this format only in JSON.
 Format:
@@ -152,8 +154,78 @@ Model Output:
 
 '''
 
+extract=[]
+
+class BrowserController:
+  def __init__(self):
+      self.playwright = sync_playwright().start()
+      self.browser = self.playwright.firefox.launch(headless=False)
+      self.page = self.browser.new_page()
+
+  def goto(self, url: str):
+      self.page.wait_for_timeout(4000)
+      self.page.goto(url)
+
+  def perform_action(self, action: dict,url:str):
+      act = action["action"]
+      target = action.get("target", {})
+      role = target.get("role")
+      name = target.get("name")
+      if act == "type":
+          option_value = action.get("value")
+          if url=="https://www.bing.com"  or "https://bing.com":
+              self.page.keyboard.type(option_value)
+              self.page.keyboard.press("Enter")
+              return
+          # print("not gone")
+          locator = self.page.get_by_role(role, name=name)
+          locator.click(force=True)
+          
+          locator.wait_for(state="visible")
+          self.page.keyboard.type(option_value)
+      elif act == "click":
+          locator = self.page.get_by_role(role, name=name).first
+          locator.click(force=True)
+          self.page.wait_for_timeout(5000)
+        
+      elif act=="read":
+          option_value = action.get("value")
+          generated={
+              "link":option_value,
+              "name":name
+          }
+          extract.append(generated)
+          
+      elif act in ["select", "choose", "check"]:
+          locator = self.page.get_by_role(role, name=name)
+          option_value = action.get("value")
+          if(option_value):
+              locator.select_option(option_value)
+          else:
+              locator.select_option(name)
+          
+  
+  def accesibility_tree(self):
+      snapshot =  self.page.accessibility.snapshot()
+      
+      with open("accessibility_tree.json", "w", encoding="utf-8") as f:
+          json.dump(snapshot, f, ensure_ascii=False, indent=1)
+  
+  def get_url(self):
+      # self.page.wait_for_timeout(5000)
+      return self.page.url
+  
+  def get_ss(self,path:str):
+     self.page.wait_for_timeout(3000)
+     self.page.screenshot(path=path, full_page=True)
+  def close(self):
+      self.browser.close()
+      self.playwright.stop()
+
+controller = BrowserController()
 
 def executor_generate(agent, messages, sender, config):
+    
     user_task=""
     accessibility_tree=""
     url=""
@@ -197,15 +269,10 @@ def executor_generate(agent, messages, sender, config):
           break  # stop at the most recent Planner step
     
     if operation=="navigate":
-       with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False)   
-        page = browser.new_page()
-        page.goto(url,wait_until="load")
-        snapshot = page.accessibility.snapshot()
-        
-        with open("accessibility_tree.json", "w", encoding="utf-8") as f:
-            json.dump(snapshot, f, ensure_ascii=False, indent=1)
-        browser.close()
+       controller.goto(url)
+        # snapshot = page.accessibility.snapshot()
+       controller.accesibility_tree()
+        # browser.close()
 
        executor_feedback={
         "success_status":True,
@@ -251,88 +318,13 @@ def executor_generate(agent, messages, sender, config):
         # else:
         #     actions = "ERROR: No choices in completion"
         actions = completion.choices[0].message.content
-        # print(actions)
-        extract=[]
-        class BrowserController:
-            def __init__(self):
-                self.playwright = sync_playwright().start()
-                self.browser = self.playwright.firefox.launch(headless=False)
-                self.page = self.browser.new_page()
-        
-            def goto(self, url: str):
-                self.page.wait_for_timeout(4000)
-                self.page.goto(url)
-        
-            def perform_action(self, action: dict):
-                act = action["action"]
-                target = action.get("target", {})
-                role = target.get("role")
-                name = target.get("name")
-        
-                if act == "type":
-                    option_value = action.get("value")
-                    if url=="https://www.bing.com"  or "https://bing.com":
-                        # print("gone")
-                        self.page.wait_for_timeout(3000)
-                        self.page.keyboard.type(option_value)
-                        self.page.wait_for_timeout(2000)
-                        self.page.keyboard.press("Enter")
-                        self.page.wait_for_timeout(3000)
-                        return
-                    # print("not gone")
-                    locator = self.page.get_by_role(role, name=name)
-                    locator.click(force=True)
-                    
-                    locator.wait_for(state="visible")
-                    self.page.keyboard.type(option_value)
-                elif act == "click":
-                    locator = self.page.get_by_role(role, name=name).first
-                    locator.click(force=True)
-                    self.page.wait_for_timeout(5000)
-                  
-                elif act=="read":
-                    option_value = action.get("value")
-                    generated={
-                        "link":option_value,
-                        "name":name
-                    }
-                    extract.append(generated)
-                    
-                elif act in ["select", "choose", "check"]:
-                    locator = self.page.get_by_role(role, name=name)
-                    option_value = action.get("value")
-                    if(option_value):
-                        locator.select_option(option_value)
-                    else:
-                        locator.select_option(name)
-                    
-            
-            def accesibility_tree(self):
-                snapshot =  self.page.accessibility.snapshot()
-                
-                with open("accessibility_tree.json", "w", encoding="utf-8") as f:
-                    json.dump(snapshot, f, ensure_ascii=False, indent=1)
-            
-            def get_url(self):
-                # self.page.wait_for_timeout(5000)
-                return self.page.url
-            
-            def get_ss(self,path:str):
-               self.page.wait_for_timeout(3000)
-               self.page.screenshot(path=path, full_page=True)
-        
-            def close(self):
-                self.browser.close()
-                self.playwright.stop()
-
-
-        controller = BrowserController()
+        print(actions)
 
         controller.get_ss("pre_ss.png")
         
         def execute_actions(url: str, actions: dict):
-            controller.goto(url)
-            controller.get_ss("pre_ss.png")
+            # controller.goto(url)
+            # controller.get_ss("pre_ss.png")
         
             if isinstance(actions, str):
                 try:
@@ -343,7 +335,7 @@ def executor_generate(agent, messages, sender, config):
             try:
                 for step in actions.get("actions", []):
                     try:
-                        controller.perform_action(step)
+                        controller.perform_action(step,url)
                     except Exception as e:
                         return f"Error while performing action {step}:\n{traceback.format_exc()}"
         
@@ -363,8 +355,8 @@ def executor_generate(agent, messages, sender, config):
         
         next_url=controller.get_url()
         controller.get_ss("post_ss.png")
-        controller.close()
-        print("here")
+        # controller.close()
+        # print("here")
         executor_feedback={
             "step_id":step_id,
             "success_status":success_fb,
@@ -393,7 +385,7 @@ Executor = AssistantAgent(
     "config_list": [
         {
             "model": "x-ai/grok-4-fast:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]
@@ -403,16 +395,5 @@ executor_llm_config=Executor.llm_config
 Executor.register_reply(
     trigger=lambda sender: True,
     reply_func=executor_generate,
-    config=executor_llm_config # Pass the config here
+    config=executor_llm_config 
 )
-# Search for pendrive with usb3.2 256gb storage
-# https://www.amazon.in/
-# messages=[]
-# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
-# planner_output=json.dumps(planner_output)
-# user_input = input("Enter your task: ")
-# messages.append({"role": "user", "content": user_input})
-# messages.append({"role":"Planner","content":planner_output})
-# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
-# executor_output = executor.generate_reply(messages)
-# print(executor_output)
