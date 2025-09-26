@@ -24,8 +24,7 @@ You will always receive the input in this JSON-like format:
   "action": "<The intended action in natural language. Example: 'Click the Login button'>",
   "pre_state": "<Summary of interactive elements before the action>",
   "post_state": "<Summary of interactive elements after the action>",
-  "all_actions":"<A list of all the sub tasks done till now for the main task",
-  "user_task":<the main user task for which we need the continue or termination of next step>
+  "all_actions":"<A list of all the sub tasks done till now for the main task"
 }
 
 ## Task
@@ -37,7 +36,7 @@ You will always receive the input in this JSON-like format:
    - Reason about the action ,after performing what it can led to. 
 3. Give reasoning step by step.  
 4. Conclude whether the task succeeded or failed. 
-6. Reason about the main user task if completed or not with provided list of sub steps. 
+5. Reason about the main user task if completed or not with provided list of sub steps. 
 
 ## Output Format
 Always respond in the following JSON format:
@@ -83,40 +82,19 @@ def analyze_image(image_path, prompt,client,model, mime: str = "png"):
     )
     return completion.choices[0].message.content
 
-def supervisor_generate(agent, messages, sender, config):
+def supervisor_generate(messages,config):
     user_messages = []
     for m in messages:
         if m["role"] == "user":
             user_messages.append(m)
     
-    user_task=user_messages[-1]["content"]
+    action=user_messages[-1]["content"]
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Planner":
         content=json.loads(messages[i]["content"])
         sub_task=content["step"]
-        operation=content["operation"]
         break
     
-    if operation=="navigate":
-       sup_feedback={
-          "success": True,
-          "reasoning": "navigated perfectly",
-          "expected_vs_actual": {
-              "expected": "navigation",
-              "actual": "navigation"
-          },
-          "is_terminate":False
-        }
-       messages.append({
-        "role": agent.name,
-        "content": sup_feedback
-        })
-       return True,{
-        "role": agent.name,
-        "content": sup_feedback
-        }
-       
-
     all_actions=[]
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="user":
@@ -143,8 +121,8 @@ def supervisor_generate(agent, messages, sender, config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"pre_ss.png"
-    image2 = r"post_ss.png"
+    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Research\pre_ss.png"
+    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Research\post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
@@ -153,11 +131,10 @@ def supervisor_generate(agent, messages, sender, config):
     post_state=analyze_image(image2, prompt2,v_client,v_model, mime="png")
 
     user_input = {
-        "action": sub_task,
+        "action": action,
         "pre_state": pre_state,
         "post_state": post_state,
-        "all_actions":all_actions,
-        "user_task":user_task
+        "all_actions":all_actions
     }
 
     completion = t_client.chat.completions.create(
@@ -168,18 +145,10 @@ def supervisor_generate(agent, messages, sender, config):
         ]
     )
     feedback=completion.choices[0].message.content
-    dict_feedback=json.loads(feedback)
-    messages.append({
-        "role": agent.name,
-        "content": dict_feedback
-        })
-    return True,{
-        "role": agent.name,
-        "content": dict_feedback
-        }
+    return feedback
 
-Supervisor = AssistantAgent(
-    name="Supervisor",
+supervisor = AssistantAgent(
+    name="supervisor",
     llm_config={
         "config_list": [
             {
@@ -188,18 +157,12 @@ Supervisor = AssistantAgent(
                 "api_key": os.environ.get("ROUT")
             },
             {
-                "model": "qwen/qwen3-4b:free",
+                "model": "deepseek/deepseek-r1-0528:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": os.environ.get("ROUT")
+                "api_key": "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"
             }
-        ]
+        ],
+        "custom_generate": supervisor_generate,
     }
-)
-
-supervisor_llm_config=Supervisor.llm_config
-Supervisor.register_reply(
-    trigger=lambda sender: True,
-    reply_func=supervisor_generate,
-    config=supervisor_llm_config 
 )
 

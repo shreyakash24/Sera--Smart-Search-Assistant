@@ -1,13 +1,13 @@
-from planner1 import planner
-from executor import Executor
-from supervisor import Supervisor
+from planner import planner
+from executor import executor
+from supervisor import supervisor
 
 def main():
     messages=[]
     
     user_input=input("Enter your task: ")
     messages.append({"role": "user","content": user_input})
-    print(messages,"\n\n")
+    
     while True:
                     
         planner_output=planner.generate_reply(messages)
@@ -20,9 +20,8 @@ def main():
         messages.append(executor_output)
         print("----Executor-----")
         print(executor_output)
-        print(messages,"\n\n")
         
-        supervisor_feedback = Supervisor.generate_reply(messages)
+        supervisor_feedback = supervisor.generate_reply(messages=messages, sender=supervisor)
         messages.append(supervisor_feedback)
         print("----Supervisor-----")
         print(supervisor_feedback)
@@ -32,9 +31,7 @@ def main():
         if  supervisor_feedback["content"]["is_terminate"]:
             break
 
-# FInd cheapest flight from mumbai to delhi for 2 adults on 5th september
-# find the most starred repository for react on github
+
 
 if __name__ == "__main__":
     main()
-
