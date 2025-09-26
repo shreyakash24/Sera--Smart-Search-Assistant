@@ -808,7 +808,7 @@ def custom_generate(agent, messages, sender, config):
                 planner_history.append(content_dict)
     tree=""
     site=""
-    with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
+    with open("accessibility_tree.json", "r", encoding="utf-8") as f:
             if tree is not "":
               tree = json.load(f)
     # for i in range(-1,-len(messages)-1,-1):
@@ -863,7 +863,6 @@ def custom_generate(agent, messages, sender, config):
 
 # #     return clean_output
     new_acts = ast.literal_eval(clean_output)
-    print(new_acts)
     if "details" in new_acts:
        if "url" in "details":
           urll=new_acts["details"]["url"]
@@ -885,7 +884,7 @@ planner = AssistantAgent(
     "config_list": [
         {
             "model": "qwen/qwen3-235b-a22b:free",  
-            "api_key": "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",
+            "api_key": os.environ.get("ROUT"),
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]

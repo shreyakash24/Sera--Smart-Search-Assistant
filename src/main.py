@@ -9,12 +9,11 @@ def main():
     messages.append({"role": "user","content": user_input})
     print(messages,"\n\n")
     while True:
-        
+                    
         planner_output=planner.generate_reply(messages)
         messages.append(planner_output)
         print("----Planner-----")
         print(planner_output)
-        
         print(messages,"\n\n")
         
         executor_output = Executor.generate_reply(messages)
@@ -28,7 +27,8 @@ def main():
         print("----Supervisor-----")
         print(supervisor_feedback)
         print(messages,"\n\n")
-        
+        #if len(messages)>=6:
+        #    del messages[-4]
         if  supervisor_feedback["content"]["is_terminate"]:
             break
 

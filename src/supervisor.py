@@ -1,4 +1,5 @@
 import base64
+import os
 import json
 from openai import OpenAI
 from autogen import AssistantAgent
@@ -184,12 +185,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": os.environ.get("ROUT")
             },
             {
                 "model": "qwen/qwen3-4b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": os.environ.get("ROUT")
             }
         ]
     }

@@ -1,7 +1,6 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
-from helper import client_from_config
 import json
 import traceback
 
