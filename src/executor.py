@@ -165,18 +165,13 @@ class BrowserController:
       self.page.wait_for_timeout(4000)
       self.page.goto(url)
 
-  def perform_action(self, action: dict,url:str):
+  def perform_action(self, action: dict):
       act = action["action"]
       target = action.get("target", {})
       role = target.get("role")
       name = target.get("name")
       if act == "type":
           option_value = action.get("value")
-          if url=="https://www.bing.com"  or "https://bing.com":
-              self.page.keyboard.type(option_value)
-              self.page.keyboard.press("Enter")
-              return
-          # print("not gone")
           locator = self.page.get_by_role(role, name=name)
           locator.click(force=True)
           
@@ -396,3 +391,4 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config 
 )
+
