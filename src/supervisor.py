@@ -60,10 +60,10 @@ Don't output anything else than this format.
 
 
 """
-def encode_image(path: str, mime: str = "png") -> str:
+def encode_image(path: str) -> str:
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
-    return f"data:image/{mime};base64,{b64}"
+    return f"data:image/png;base64,{b64}"
 
 def analyze_image(image_path, prompt,client,model, mime: str = "png"):
     data_url = encode_image(image_path, mime)
@@ -127,8 +127,8 @@ def supervisor_generate(messages,config):
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
 
-    pre_state=analyze_image(image1, prompt1,v_client,v_model, mime="png")
-    post_state=analyze_image(image2, prompt2,v_client,v_model, mime="png")
+    pre_state=analyze_image(image1, prompt1,v_client,v_model)
+    post_state=analyze_image(image2, prompt2,v_client,v_model)
 
     user_input = {
         "action": action,
@@ -165,4 +165,5 @@ supervisor = AssistantAgent(
         "custom_generate": supervisor_generate,
     }
 )
+
 
