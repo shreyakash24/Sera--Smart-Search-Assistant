@@ -1,5 +1,4 @@
 import base64
-import os
 import json
 from openai import OpenAI
 from autogen import AssistantAgent
@@ -24,7 +23,8 @@ You will always receive the input in this JSON-like format:
   "action": "<The intended action in natural language. Example: 'Click the Login button'>",
   "pre_state": "<Summary of interactive elements before the action>",
   "post_state": "<Summary of interactive elements after the action>",
-  "all_actions":"<A list of all the sub tasks done till now for the main task"
+  "all_actions":"<A list of all the sub tasks done till now for the main task",
+  "user_task":<the main user task for which we need the continue or termination of next step>
 }
 
 ## Task
@@ -36,7 +36,7 @@ You will always receive the input in this JSON-like format:
    - Reason about the action ,after performing what it can led to. 
 3. Give reasoning step by step.  
 4. Conclude whether the task succeeded or failed. 
-5. Reason about the main user task if completed or not with provided list of sub steps. 
+6. Reason about the main user task if completed or not with provided list of sub steps. 
 
 ## Output Format
 Always respond in the following JSON format:
@@ -52,18 +52,18 @@ Don't output anything else than this format.
 }
 
 ## Important Rules
-- If the action did not produce the expected outcome, mark `"success": false`.  
+- If the action did not produce the expected outcome, mark `"success": false`. 
+- For subtask like extracting,reading from a webpage would have no change in UI so always give "success":True,but only terminate  if the main user task was completed or no,after extraction or reading?
 - Be objective. Do not assume success unless the evidence clearly supports it.  
 - Use precise reasoning, not vague statements.  
 - Keep reasoning concise but logical. 
 - Stick to the output format strictly dont output anything extra than the json output format explicitly mentioned.
 
-
 """
-def encode_image(path: str) -> str:
+def encode_image(path: str, mime: str = "png") -> str:
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
-    return f"data:image/png;base64,{b64}"
+    return f"data:image/{mime};base64,{b64}"
 
 def analyze_image(image_path, prompt,client,model, mime: str = "png"):
     data_url = encode_image(image_path, mime)
@@ -82,19 +82,39 @@ def analyze_image(image_path, prompt,client,model, mime: str = "png"):
     )
     return completion.choices[0].message.content
 
-def supervisor_generate(messages,config):
-    user_messages = []
-    for m in messages:
-        if m["role"] == "user":
-            user_messages.append(m)
+def supervisor_generate(agent, messages, sender, config):
+    for i in range(-1,-len(messages)-1,-1):
+      if messages[i]["role"]=="user":
+        user_task=messages[i]["content"]
+        break
     
-    action=user_messages[-1]["content"]
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Planner":
         content=json.loads(messages[i]["content"])
         sub_task=content["step"]
+        operation=content["operation"]
         break
     
+    if operation=="navigate":
+       sup_feedback={
+          "success": True,
+          "reasoning": "navigated perfectly",
+          "expected_vs_actual": {
+              "expected": "navigation",
+              "actual": "navigation"
+          },
+          "is_terminate":False
+        }
+       messages.append({
+        "role": agent.name,
+        "content": sup_feedback
+        })
+       return True,{
+        "role": agent.name,
+        "content": sup_feedback
+        }
+       
+
     all_actions=[]
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="user":
@@ -121,20 +141,21 @@ def supervisor_generate(messages,config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Research\pre_ss.png"
-    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Research\post_ss.png"
+    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
+    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
 
-    pre_state=analyze_image(image1, prompt1,v_client,v_model)
-    post_state=analyze_image(image2, prompt2,v_client,v_model)
+    pre_state=analyze_image(image1, prompt1,v_client,v_model, mime="png")
+    post_state=analyze_image(image2, prompt2,v_client,v_model, mime="png")
 
     user_input = {
-        "action": action,
+        "action": sub_task,
         "pre_state": pre_state,
         "post_state": post_state,
-        "all_actions":all_actions
+        "all_actions":all_actions,
+        "user_task":user_task
     }
 
     completion = t_client.chat.completions.create(
@@ -145,25 +166,38 @@ def supervisor_generate(messages,config):
         ]
     )
     feedback=completion.choices[0].message.content
-    return feedback
+    dict_feedback=json.loads(feedback)
+    messages.append({
+        "role": agent.name,
+        "content": dict_feedback
+        })
+    return True,{
+        "role": agent.name,
+        "content": dict_feedback
+        }
 
-supervisor = AssistantAgent(
-    name="supervisor",
+Supervisor = AssistantAgent(
+    name="Supervisor",
     llm_config={
         "config_list": [
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": os.environ.get("ROUT")
+                "api_key": "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"
             },
             {
-                "model": "deepseek/deepseek-r1-0528:free",
+                "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
-        ],
-        "custom_generate": supervisor_generate,
+        ]
     }
 )
 
+supervisor_llm_config=Supervisor.llm_config
+Supervisor.register_reply(
+    trigger=lambda sender: True,
+    reply_func=supervisor_generate,
+    config=supervisor_llm_config # Pass the config here
+)
 
