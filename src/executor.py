@@ -55,6 +55,7 @@ operation to perform and which element to target.
     "name": "...",
     "description": "..."{if there*}
   },
+  "value":"..."{if any*}
   "reason": "Explain why this element matches the user task",
    }
 
@@ -78,12 +79,12 @@ Format:
   "reason": "Explain why this element matches the user task",
    }
         
-Example1:
+Example:
 User Task:
 "Find the cheapest phone and add it to cart, then proceed to checkout."
 
 Accessibility tree snippet:
-[{"role":"textbox","name":"Search"},{"role":"button","name":"Search"},{"role":"link","name":"Home"},{"role":"link","name":"Categories"},{"role":"link","name":"Phones"},{"role":"link","name":"Laptops"},{"role":"link","name":"Phone X – $899"},{"role":"link","name":"Phone Y – $499"},{"role":"link","name":"Phone Z – $750"},{"role":"button","name":"Add to Cart"},{"role":"button","name":"Wishlist"},{"role":"link","name":"Cart"},{"role":"button","name":"Checkout"}]
+[{"role":"textbox","name":"Search"},{"role":"button","name":"Search"},{"role":"link","name":"Home"},{"role":"link","name":"Categories"},{"role":"link","name":"Phones"},{"role":"link","name":"Laptops"},{"role":"link","name":"Phone X – 899"},{"role":"link","name":"Phone Y – 499"},{"role":"link","name":"Phone Z – 750"},{"role":"button","name":"Add to Cart"},{"role":"button","name":"Wishlist"},{"role":"link","name":"Cart"},{"role":"button","name":"Checkout"}]
 
 Model Output:
 {
@@ -165,16 +166,20 @@ class BrowserController:
       self.page.wait_for_timeout(4000)
       self.page.goto(url)
 
-  def perform_action(self, action: dict):
+  def perform_action(self, action: dict,url:str):
       act = action["action"]
       target = action.get("target", {})
       role = target.get("role")
       name = target.get("name")
       if act == "type":
           option_value = action.get("value")
+          if url=="https://www.bing.com"  or "https://bing.com":
+              self.page.keyboard.type(option_value)
+              self.page.keyboard.press("Enter")
+              return
+          # print("not gone")
           locator = self.page.get_by_role(role, name=name)
           locator.click(force=True)
-          
           locator.wait_for(state="visible")
           self.page.keyboard.type(option_value)
       elif act == "click":
@@ -247,12 +252,7 @@ def executor_generate(agent, messages, sender, config):
     
     for i in range(-1, -len(messages) - 1, -1):
       if messages[i]["role"] == "Planner":
-          try:
-              content = json.loads(messages[i]["content"])  # parse JSON string
-          except json.JSONDecodeError as e:
-              print("JSON decode error:", e, messages[i]["content"])
-              continue
-  
+          content = json.loads(messages[i]["content"])  
           details = content.get("details", {})
   
           if "url" in details:
@@ -271,7 +271,6 @@ def executor_generate(agent, messages, sender, config):
        executor_feedback={
         "success_status":True,
         "error":False,
-        # "updated_tree":new_tree,
         "step_id":step_id,
         "updated_url":url
        }
@@ -389,6 +388,16 @@ executor_llm_config=Executor.llm_config
 Executor.register_reply(
     trigger=lambda sender: True,
     reply_func=executor_generate,
-    config=executor_llm_config 
+    config=executor_llm_config # Pass the config here
 )
-
+# Search for pendrive with usb3.2 256gb storage
+# https://www.amazon.in/
+# messages=[]
+# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
+# planner_output=json.dumps(planner_output)
+# user_input = input("Enter your task: ")
+# messages.append({"role": "user", "content": user_input})
+# messages.append({"role":"Planner","content":planner_output})
+# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
+# executor_output = executor.generate_reply(messages)
+# print(executor_output)
