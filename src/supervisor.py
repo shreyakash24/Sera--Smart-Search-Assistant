@@ -28,12 +28,14 @@ You will always receive the input in this JSON-like format:
 }
 
 ## Task
-1. Read the `action` to understand what was supposed to happen.  
+1. Read the `action` to understand what was supposed to happen.
+2. If the action as to read or extract always give succes status as true since there would be no changes in Ui. 
 2. Compare `pre_state` and `post_state` carefully.  
-   - Look for the expected change (e.g., new popup, form submitted, error message,navigated to new page,only change in current page by typing some information in input or slection of any elements).  
+   - Look for the expected change (e.g., new popup,change in UI, form submitted, error message,navigated to new page,only change in current page by typing some information in input or slection of any elements).  
    - Look for missing or incorrect changes.
-   - Sometimes the action is just to type something or fill the details in the same page.
-   - Reason about the action ,after performing what it can led to. 
+   - Sometimes the action is just to type something,clicking something or fill the details in the same page.
+   - Reason about the action ,after performing what it can led to.
+   - Not always the changes predicted will be as it is dont be very rigid with the prediction,some slight changes will work too "but not next to nothing" ,give success as false only if any major change to happen isnt there and you are confident about it.   
 3. Give reasoning step by step.  
 4. Conclude whether the task succeeded or failed. 
 6. Reason about the main user task if completed or not with provided list of sub steps. 
@@ -52,7 +54,7 @@ Don't output anything else than this format.
 }
 
 ## Important Rules
-- If the action did not produce the expected outcome, mark `"success": false`. 
+- If the action did produce the expected outcome and if there are slight considerable changes wrt the action performed, mark `"success": true`. 
 - For subtask like extracting,reading from a webpage would have no change in UI so always give "success":True,but only terminate  if the main user task was completed or no,after extraction or reading?
 - Be objective. Do not assume success unless the evidence clearly supports it.  
 - Use precise reasoning, not vague statements.  
@@ -183,12 +185,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             },
             {
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
         ]
     }
