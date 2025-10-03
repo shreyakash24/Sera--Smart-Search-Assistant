@@ -40,10 +40,10 @@ operation to perform and which element to target.
    
 -Match by text cues
 -Reason about the user task and decide which should be the role,name or description and operation accordigly.
--First try exact match on name.
--If none, try substring/fuzzy match.
--If still none, look at description.
+-First try exact match on name and reason if the subtask actually satisfies with selecting a particular element.
+-If none, look at description and see if by description the correct element can be inferred for performing the action.
 -Normalize text (ignore case/extra spaces).
+-Do not pick any element candidate by your own only choose from accesbility tree provided.
 
 -Return structured output
 -Always return a JSON object with:
@@ -66,18 +66,23 @@ VeryIMP:The selected action should not contain role as 'text leaf' as it cannot 
 IMP: If the selected action contains interacting with text leaf always prioritize textbox first ,if textbox not present do interact using textleaf*
 
 Always output in proper JSON format only ,so it can be used afterwards using json.loads().
-Strictly follow this format only in JSON.
+Strictly follow this format only in JSON,giving a list of actions always*even if an individual action.
 Format:
  {
+  "actions":[
+  {
   "action": "click | type | select | read",
   "target": {
     "role": "...",
     "name": "...",
     "description": "..."{if there*}
   },
-  "value":"..."{if any*}
-  "reason": "Explain why this element matches the user task",
-   }
+  "value":"..."{if any*},
+  "reason": "Explain why this element matches the user task"
+   },
+   {another action if more than 1}
+    ]
+  }
         
 Example:
 User Task:
@@ -155,12 +160,17 @@ Model Output:
 '''
 
 extract=[]
-
+inner_list=[]
+extract_links=[]
+count=0
+first_time=True
+initial_navigate=True
 class BrowserController:
   def __init__(self):
       self.playwright = sync_playwright().start()
       self.browser = self.playwright.firefox.launch(headless=False)
-      self.page = self.browser.new_page()
+      self.context =  self.browser.new_context()
+      self.page = self.context.new_page()
 
   def goto(self, url: str):
       self.page.wait_for_timeout(4000)
@@ -173,18 +183,27 @@ class BrowserController:
       name = target.get("name")
       if act == "type":
           option_value = action.get("value")
-          if url=="https://www.bing.com"  or "https://bing.com":
+          if url in ["https://www.bing.com", "https://bing.com"]:
               self.page.keyboard.type(option_value)
               self.page.keyboard.press("Enter")
               return
           # print("not gone")
           locator = self.page.get_by_role(role, name=name)
+          print("locator got")
           locator.click(force=True)
+          print("clicked")
           locator.wait_for(state="visible")
           self.page.keyboard.type(option_value)
+          self.page.keyboard.press("Enter")
       elif act == "click":
           locator = self.page.get_by_role(role, name=name).first
-          locator.click(force=True)
+          if role=="link":
+              with self.page.expect_popup() as popup_info:
+                  locator.click(force=True)
+              self.page = popup_info.value
+              self.page.wait_for_load_state()
+          else:
+              locator.click(force=True)
           self.page.wait_for_timeout(5000)
         
       elif act=="read":
@@ -193,7 +212,8 @@ class BrowserController:
               "link":option_value,
               "name":name
           }
-          extract.append(generated)
+          inner_list.append(generated)
+      
           
       elif act in ["select", "choose", "check"]:
           locator = self.page.get_by_role(role, name=name)
@@ -224,7 +244,7 @@ class BrowserController:
 controller = BrowserController()
 
 def executor_generate(agent, messages, sender, config):
-    
+    global initial_navigate,count,first_time,extract,inner_list,extract_links
     user_task=""
     accessibility_tree=""
     url=""
@@ -260,11 +280,10 @@ def executor_generate(agent, messages, sender, config):
           if "text" in details:
               fill_text = details["text"]
   
-          break  # stop at the most recent Planner step
+          break  
     
-    if operation=="navigate":
+    if operation=="navigate" and initial_navigate==True :
        controller.goto(url)
-        # snapshot = page.accessibility.snapshot()
        controller.accesibility_tree()
         # browser.close()
 
@@ -275,10 +294,31 @@ def executor_generate(agent, messages, sender, config):
         "updated_url":url
        }
 
-      #  print(messages)
-      #  print("done")
+       initial_navigate=False
        return True, {"role": agent.name, "content": executor_feedback}
     
+    if operation == "navigate" and initial_navigate == False:
+      print("In extract links part-- ")
+  
+      if extract_links and count < len(extract_links):
+          new_link = extract_links[count]["link"]
+          print("new link:", new_link)
+          count += 1
+  
+          controller.goto(new_link)
+          controller.accesibility_tree()
+  
+          executor_feedback = {
+              "success_status": True,
+              "error": False,
+              "step_id": step_id,
+              "updated_url": new_link
+          }
+          return True, {"role": agent.name, "content": executor_feedback}
+      else:
+          print("No more links left in extract_links.")
+
+
     if fill_text!="":
        user_task=user_task + f"with text to type as {fill_text}"
     
@@ -298,26 +338,13 @@ def executor_generate(agent, messages, sender, config):
                     {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
             ]
         )
-        # print(completion)
-        # print("act")
-        # if completion and completion.choices:
-        #     choice = completion.choices[0]
-        #     message = getattr(choice, "message", None)
-        
-        #     if message and message.get("content"):
-        #         actions = message["content"]
-        #     else:
-        #         actions = "ERROR: Empty content from model"
-        # else:
-        #     actions = "ERROR: No choices in completion"
+
         actions = completion.choices[0].message.content
         print(actions)
 
         controller.get_ss("pre_ss.png")
         
         def execute_actions(url: str, actions: dict):
-            # controller.goto(url)
-            # controller.get_ss("pre_ss.png")
         
             if isinstance(actions, str):
                 try:
@@ -328,6 +355,7 @@ def executor_generate(agent, messages, sender, config):
             try:
                 for step in actions.get("actions", []):
                     try:
+                        print("gone")
                         controller.perform_action(step,url)
                     except Exception as e:
                         return f"Error while performing action {step}:\n{traceback.format_exc()}"
@@ -350,6 +378,20 @@ def executor_generate(agent, messages, sender, config):
         controller.get_ss("post_ss.png")
         # controller.close()
         # print("here")
+
+        if inner_list:
+          if first_time==False:
+            extract.append(inner_list.copy())
+
+        if inner_list:
+            if first_time:
+                first_time = False
+                extract_links = inner_list.copy()   
+                print("extracted search results and not displaying in extract")
+                print(extract_links)
+                
+        
+
         executor_feedback={
             "step_id":step_id,
             "success_status":success_fb,
@@ -358,7 +400,7 @@ def executor_generate(agent, messages, sender, config):
             "updated_url":next_url,
             "extract":extract
         }
-
+        inner_list.clear()
         # print(messages)
         return True,{
         "role": agent.name,
@@ -378,7 +420,7 @@ Executor = AssistantAgent(
     "config_list": [
         {
             "model": "x-ai/grok-4-fast:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]
@@ -388,16 +430,6 @@ executor_llm_config=Executor.llm_config
 Executor.register_reply(
     trigger=lambda sender: True,
     reply_func=executor_generate,
-    config=executor_llm_config # Pass the config here
+    config=executor_llm_config 
 )
-# Search for pendrive with usb3.2 256gb storage
-# https://www.amazon.in/
-# messages=[]
-# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
-# planner_output=json.dumps(planner_output)
-# user_input = input("Enter your task: ")
-# messages.append({"role": "user", "content": user_input})
-# messages.append({"role":"Planner","content":planner_output})
-# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
-# executor_output = executor.generate_reply(messages)
-# print(executor_output)
+
