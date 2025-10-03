@@ -141,8 +141,8 @@ def supervisor_generate(agent, messages, sender, config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
-    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
+    image1 = r"pre_ss.png"
+    image2 = r"post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
