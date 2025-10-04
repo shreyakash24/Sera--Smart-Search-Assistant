@@ -1,7 +1,7 @@
 from autogen import AssistantAgent
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
-import json
+import json,json5
 import traceback
 
 system_prompt='''You are a DOM selector extraction assistant. 
@@ -44,7 +44,9 @@ operation to perform and which element to target.
 -If none, look at description and see if by description the correct element can be inferred for performing the action.
 -Normalize text (ignore case/extra spaces).
 -Do not pick any element candidate by your own only choose from accesbility tree provided.
--Always give the full,entire name,value,role for the candidate element don't cut in between .
+-ALWAYS RETURN A VALID JSON STRUCTURE.
+-NEVER OMIT OR CUT OFF A FIELD.
+-DO NOT TRUNCATE THE LINK VALUE OR NAME.
 -Also if link is a role provide it's value too which is a link.
 -DO NOT OUTPUT YOUR THINKING ,OR ANY EXTRA PART EXCEPT THE STRUCTURED JSON OUTPUT.
 
@@ -56,14 +58,16 @@ operation to perform and which element to target.
   "target": {
     "role": "...",
     "name": "...",
-    "description": "..."{if there*}
+    "description": "..."[if there*]
   },
-  "value":"..."{if any*}
-  "reason": "Explain why this element matches the user task",
+  "value":"..."[if any*],
+  "reason": "Explain why this element matches the user task"
    }
 
 **Rules:
 -For date selection,no of people,entities selection,etc always click first.
+-DO NOT TRUNCATE THE LINK VALUE OR NAME.
+-THE STRUCTURE OF RESPONSE SHOULD NOT BE BROKEN, DONT BE CARELESS,DONT MISS THE DOUBLE QUOTES,COMMAS,FORMAT AS IT'S IMPORTANT.
 -Always give the entire role,name,value as given in accessibility tree for the candidate element selected for action.
 VeryIMP:The selected action should not contain role as 'text leaf' as it cannot be interacted with,unless the task is of just read or extract,
         else for interaction u should look for 'textbox' instead. For elements with almost same name and meaning having both textleaf and textbox ,always select the textbox. 
@@ -89,38 +93,8 @@ Format:
     ]
   }
         
+
 Example:
-User Task:
-"Find the cheapest phone and add it to cart, then proceed to checkout."
-
-Accessibility tree snippet:
-[{"role":"textbox","name":"Search"},{"role":"button","name":"Search"},{"role":"link","name":"Home"},{"role":"link","name":"Categories"},{"role":"link","name":"Phones"},{"role":"link","name":"Laptops"},{"role":"link","name":"Phone X – 899"},{"role":"link","name":"Phone Y – 499"},{"role":"link","name":"Phone Z – 750"},{"role":"button","name":"Add to Cart"},{"role":"button","name":"Wishlist"},{"role":"link","name":"Cart"},{"role":"button","name":"Checkout"}]
-
-Model Output:
-{
-  "actions": [
-    {
-      "action": "click",
-      "target": { "role": "link", "name": "Phone Y - $499" },
-    },
-    {
-      "action": "click",
-      "target": { "role": "button", "name": "Add to Cart" },
-    },
-    {
-      "action": "click",
-      "target": { "role": "link", "name": "Cart" },
-    
-    },
-    {
-      "action": "click",
-      "target": { "role": "button", "name": "Checkout" },
-    }
-  ]
-}
-
-
-Example2:
 User Task:
 "Apply for the 'Software Engineer' position and upload resume with any input name,email number of your choice."
 
@@ -132,31 +106,49 @@ Model Output:
   "actions": [
     {
       "action": "click",
-      "target": { "role": "link", "name": "Software Engineer" },
+      "target": { 
+        "role": "link",
+        "name": "Software Engineer"
+         }
     },
     {
       "action": "type",
-      "target": { "role": "textbox", "name": "Full Name" },
-      "value": "John Doe",
+      "target": { 
+        "role": "textbox",
+        "name": "Full Name"
+          },
+      "value": "John Doe"
     },
     {
       "action": "type",
-      "target": { "role": "textbox", "name": "Email" },
-      "value": "john@example.com",
+      "target": {
+        "role": "textbox",
+        "name": "Email" 
+        },
+      "value": "john@example.com"
     },
     {
       "action": "type",
-      "target": { "role": "textbox", "name": "Phone" },
-      "value": "9876543210",
+      "target": {
+        "role": "textbox",
+        "name": "Phone" 
+        },
+      "value": "9876543210"
     },
     {
       "action": "upload",
-      "target": { "role": "textbox", "name": "Resume Upload" },
-      "value": "resume.pdf",
+      "target": { 
+      "role": "textbox",
+       "name": "Resume Upload"
+         },
+      "value": "resume.pdf"
     },
     {
       "action": "click",
-      "target": { "role": "button", "name": "Submit Application" },
+      "target": {
+        "role": "button",
+        "name": "Submit Application"
+          }
     }
   ]
 }
@@ -355,7 +347,7 @@ def executor_generate(agent, messages, sender, config):
         
             if isinstance(actions, str):
                 try:
-                    actions = json.loads(actions, strict=False)
+                    actions = json5.loads(actions)
                 except Exception as e:
                     return f"Failed to parse actions: {e}\n{traceback.format_exc()}"
         
@@ -427,9 +419,9 @@ Executor = AssistantAgent(
     "config_list": [
         {
             "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1",
-            "max_tokens": 20000
+            "max_tokens": 30000
         }
     ]
     }
@@ -440,14 +432,3 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config # Pass the config here
 )
-# Search for pendrive with usb3.2 256gb storage
-# https://www.amazon.in/
-# messages=[]
-# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
-# planner_output=json.dumps(planner_output)
-# user_input = input("Enter your task: ")
-# messages.append({"role": "user", "content": user_input})
-# messages.append({"role":"Planner","content":planner_output})
-# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
-# executor_output = executor.generate_reply(messages)
-# print(executor_output)
