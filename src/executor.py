@@ -44,6 +44,9 @@ operation to perform and which element to target.
 -If none, look at description and see if by description the correct element can be inferred for performing the action.
 -Normalize text (ignore case/extra spaces).
 -Do not pick any element candidate by your own only choose from accesbility tree provided.
+-Always give the full,entire name,value,role for the candidate element don't cut in between .
+-Also if link is a role provide it's value too which is a link.
+-DO NOT OUTPUT YOUR THINKING ,OR ANY EXTRA PART EXCEPT THE STRUCTURED JSON OUTPUT.
 
 -Return structured output
 -Always return a JSON object with:
@@ -61,12 +64,14 @@ operation to perform and which element to target.
 
 **Rules:
 -For date selection,no of people,entities selection,etc always click first.
+-Always give the entire role,name,value as given in accessibility tree for the candidate element selected for action.
 VeryIMP:The selected action should not contain role as 'text leaf' as it cannot be interacted with,unless the task is of just read or extract,
         else for interaction u should look for 'textbox' instead. For elements with almost same name and meaning having both textleaf and textbox ,always select the textbox. 
 IMP: If the selected action contains interacting with text leaf always prioritize textbox first ,if textbox not present do interact using textleaf*
 
 Always output in proper JSON format only ,so it can be used afterwards using json.loads().
 Strictly follow this format only in JSON,giving a list of actions always*even if an individual action.
+The value key if there should be outside target key not in target as specified .
 Format:
  {
   "actions":[
@@ -183,7 +188,7 @@ class BrowserController:
       name = target.get("name")
       if act == "type":
           option_value = action.get("value")
-          if url in ["https://www.bing.com", "https://bing.com"]:
+          if url=="https://www.bing.com" or url=="https://bing.com":
               self.page.keyboard.type(option_value)
               self.page.keyboard.press("Enter")
               return
@@ -301,6 +306,7 @@ def executor_generate(agent, messages, sender, config):
       print("In extract links part-- ")
   
       if extract_links and count < len(extract_links):
+          print("count:", count)
           new_link = extract_links[count]["link"]
           print("new link:", new_link)
           count += 1
@@ -337,7 +343,7 @@ def executor_generate(agent, messages, sender, config):
                     {"role": "system", "content": system_prompt},   
                     {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
             ],
-            max_tokens=20000
+            max_tokens=cfg["max_tokens"]
         )
 
         actions = completion.choices[0].message.content
@@ -387,7 +393,7 @@ def executor_generate(agent, messages, sender, config):
         if inner_list:
             if first_time:
                 first_time = False
-                extract_links = inner_list.copy()   
+                extract_links = inner_list.copy()   # now extract_links is a list-of-dicts (not [[...]])
                 print("extracted search results and not displaying in extract")
                 print(extract_links)
                 
@@ -420,9 +426,10 @@ Executor = AssistantAgent(
     llm_config= {
     "config_list": [
         {
-            "model": "qwen/qwen3-coder:free",  
-            "api_key": "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",
-            "base_url": "https://openrouter.ai/api/v1"
+            "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
+            "api_key": "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",
+            "base_url": "https://openrouter.ai/api/v1",
+            "max_tokens": 20000
         }
     ]
     }
@@ -431,7 +438,16 @@ executor_llm_config=Executor.llm_config
 Executor.register_reply(
     trigger=lambda sender: True,
     reply_func=executor_generate,
-    config=executor_llm_config 
+    config=executor_llm_config # Pass the config here
 )
-
-
+# Search for pendrive with usb3.2 256gb storage
+# https://www.amazon.in/
+# messages=[]
+# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
+# planner_output=json.dumps(planner_output)
+# user_input = input("Enter your task: ")
+# messages.append({"role": "user", "content": user_input})
+# messages.append({"role":"Planner","content":planner_output})
+# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
+# executor_output = executor.generate_reply(messages)
+# print(executor_output)
