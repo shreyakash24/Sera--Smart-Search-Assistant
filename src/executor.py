@@ -336,7 +336,8 @@ def executor_generate(agent, messages, sender, config):
             messages=[ 
                     {"role": "system", "content": system_prompt},   
                     {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
-            ]
+            ],
+            max_tokens=20000
         )
 
         actions = completion.choices[0].message.content
@@ -419,7 +420,7 @@ Executor = AssistantAgent(
     llm_config= {
     "config_list": [
         {
-            "model": "x-ai/grok-4-fast:free",  
+            "model": "qwen/qwen3-coder:free",  
             "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1"
         }
@@ -432,4 +433,5 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config 
 )
+
 
