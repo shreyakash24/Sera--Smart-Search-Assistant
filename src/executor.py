@@ -224,7 +224,7 @@ class BrowserController:
   def accesibility_tree(self):
       snapshot =  self.page.accessibility.snapshot()
       
-      with open("accessibility_tree.json", "w", encoding="utf-8") as f:
+      with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "w", encoding="utf-8") as f:
           json.dump(snapshot, f, ensure_ascii=False, indent=1)
   
   def get_url(self):
@@ -250,7 +250,7 @@ def executor_generate(agent, messages, sender, config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
+        with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "r", encoding="utf-8") as f:
             accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
@@ -341,7 +341,7 @@ def executor_generate(agent, messages, sender, config):
         actions = completion.choices[0].message.content
         print(actions)
 
-        controller.get_ss("pre_ss.png")
+        controller.get_ss("Sera--Smart-Search-Assistant/pre_ss.png")
         
         def execute_actions(url: str, actions: dict):
         
@@ -374,7 +374,7 @@ def executor_generate(agent, messages, sender, config):
         controller.accesibility_tree()
         
         next_url=controller.get_url()
-        controller.get_ss("post_ss.png")
+        controller.get_ss("Sera--Smart-Search-Assistant/post_ss.png")
         # controller.close()
         # print("here")
 
@@ -412,14 +412,14 @@ def executor_generate(agent, messages, sender, config):
             "content": f"Executor generate failed: {e}\n{traceback.format_exc()}"
         }
 
-
+import os
 Executor = AssistantAgent(
     name="Executor",
     llm_config= {
     "config_list": [
         {
             "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
-            "api_key": "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",
+            "api_key": os.environ.get("ROUT1"),
             "base_url": "https://openrouter.ai/api/v1",
             "max_tokens": 30000
         }

@@ -143,8 +143,8 @@ def supervisor_generate(agent, messages, sender, config):
     v_model=v_cfg["model"]
     t_model=t_cfg["model"]
 
-    image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
-    image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
+    image1 = r"Sera--Smart-Search-Assistant/pre_ss.png"
+    image2 = r"Sera--Smart-Search-Assistant/post_ss.png"
 
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
     prompt2 = "Summarize this page what it is about and what all element it contains"
@@ -177,7 +177,7 @@ def supervisor_generate(agent, messages, sender, config):
         "role": agent.name,
         "content": dict_feedback
         }
-
+import os
 Supervisor = AssistantAgent(
     name="Supervisor",
     llm_config={
@@ -185,12 +185,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": os.environ.get("ROUT2")
             },
             {
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": os.environ.get("ROUT3")
             }
         ]
     }

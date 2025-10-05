@@ -989,7 +989,7 @@ YOUR RESPONSIBILITIES:
     1. Break down a user query into step-by-step actions for web scraping and automation.
     2. Be aware of the accesbility tree provided in context.
     3. If no site is provided by the user, try to interpret the website from the brands etc. mentioned, if not found any clue then use a search engine (preferably precise link for the query on bing) and then extract the search results to extract top 5 links .
-    4. Navigate* the links of the websites listed by the search engine one by one . 
+    4. Navigate the links of the websites listed by the search engine one by one . 
     5. When on a particular website no need to access each product one by one,just plan with proper details to be fetched from task given precisely,considering the main task as context to generate the plan for a website.
     6. Always follow the above steps 3,4&5 don't plan randomly anything like click on first website in bing search results instead of navigate to first search result in bing search 
     7. Always remember after the task is finished on a particular website the plan should be to navigate to the next website ,instead of navigating to bing page and then navigate to next.
@@ -1062,7 +1062,7 @@ def custom_generate(agent, messages, sender, config):
                 planner_history.append(content_dict)
     tree=""
     site=""
-    with open("accessibility_tree.json", "r", encoding="utf-8") as f:
+    with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "r", encoding="utf-8") as f:
             if tree is not "":
               tree = json.load(f)
     # for i in range(-1,-len(messages)-1,-1):
@@ -1160,7 +1160,7 @@ planner = AssistantAgent(
     "config_list": [
         {
             "model": "qwen/qwen3-235b-a22b:free",  
-            "api_key": "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",
+            "api_key": os.environ.get("ROUT"),
             "base_url": "https://openrouter.ai/api/v1"
         }
     ]
