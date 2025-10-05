@@ -1062,7 +1062,7 @@ def custom_generate(agent, messages, sender, config):
                 planner_history.append(content_dict)
     tree=""
     site=""
-    with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "r", encoding="utf-8") as f:
+    with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
             if tree is not "":
               tree = json.load(f)
     # for i in range(-1,-len(messages)-1,-1):

@@ -224,7 +224,7 @@ class BrowserController:
   def accesibility_tree(self):
       snapshot =  self.page.accessibility.snapshot()
       
-      with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "w", encoding="utf-8") as f:
+      with open("src/accessibility_tree.json", "w", encoding="utf-8") as f:
           json.dump(snapshot, f, ensure_ascii=False, indent=1)
   
   def get_url(self):
@@ -238,186 +238,188 @@ class BrowserController:
       self.browser.close()
       self.playwright.stop()
 
-controller = BrowserController()
+
 
 def executor_generate(agent, messages, sender, config):
+    controller = BrowserController()
     global initial_navigate,count,first_time,extract,inner_list,extract_links
     user_task=""
     accessibility_tree=""
     url=""
     operation=""
     fill_text=""
-
-    for i in range(-1,-len(messages)-1,-1):
-      if messages[i]["role"]=="Executor":
-        with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "r", encoding="utf-8") as f:
-            accessibility_tree = json.load(f)
-        url=messages[i]["content"]["updated_url"]
-        break
-    
-    for i in range(-1,-len(messages)-1,-1):
-      if messages[i]["role"]=="Planner":
-        raw_content = messages[i]["content"]
-        if isinstance(raw_content, str):
-            content = json.loads(raw_content)
-        else :
-            content = raw_content
-        step_id = content.get("step_id")
-        user_task = content.get("step")
-        operation = content.get("operation")
-        break
-    
-    for i in range(-1, -len(messages) - 1, -1):
-      if messages[i]["role"] == "Planner":
-          content = json.loads(messages[i]["content"])  
-          details = content.get("details", {})
-  
-          if "url" in details:
-              url = details["url"]
-          if "text" in details:
-              fill_text = details["text"]
-  
-          break  
-    
-    if operation=="navigate" and initial_navigate==True :
-       controller.goto(url)
-       controller.accesibility_tree()
-        # browser.close()
-
-       executor_feedback={
-        "success_status":True,
-        "error":False,
-        "step_id":step_id,
-        "updated_url":url
-       }
-
-       initial_navigate=False
-       return True, {"role": agent.name, "content": executor_feedback}
-    
-    if operation == "navigate" and initial_navigate == False:
-      print("In extract links part-- ")
-  
-      if extract_links and count < len(extract_links):
-          print("count:", count)
-          new_link = extract_links[count]["link"]
-          print("new link:", new_link)
-          count += 1
-  
-          controller.goto(new_link)
-          controller.accesibility_tree()
-  
-          executor_feedback = {
-              "success_status": True,
-              "error": False,
-              "step_id": step_id,
-              "updated_url": new_link
-          }
-          return True, {"role": agent.name, "content": executor_feedback}
-      else:
-          print("No more links left in extract_links.")
-
-
-    if fill_text!="":
-       user_task=user_task + f"with text to type as {fill_text}"
-    
     try:
-        # print("started")
-        cfg = config["config_list"][0]
-
-        client = OpenAI(
-            base_url=cfg["base_url"],   
-            api_key=cfg["api_key"],
-        )
-
-        completion = client.chat.completions.create(
-            model=cfg["model"],         
-            messages=[ 
-                    {"role": "system", "content": system_prompt},   
-                    {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
-            ],
-            max_tokens=cfg["max_tokens"]
-        )
-
-        actions = completion.choices[0].message.content
-        _, sep, after = actions.partition("</think>")
-        if sep:  
-            clean_output = after.strip()
-        else:   
-            clean_output = actions.strip()
-        actions=clean_output
-        # print(actions)
-
-        controller.get_ss("Sera--Smart-Search-Assistant/pre_ss.png")
+        for i in range(-1,-len(messages)-1,-1):
+            if messages[i]["role"]=="Executor":
+                with open("src/accessibility_tree.json", "r", encoding="utf-8") as f:
+                    accessibility_tree = json.load(f)
+                url=messages[i]["content"]["updated_url"]
+                break
+            
+        for i in range(-1,-len(messages)-1,-1):
+            if messages[i]["role"]=="Planner":
+                raw_content = messages[i]["content"]
+                if isinstance(raw_content, str):
+                    content = json.loads(raw_content)
+                else :
+                    content = raw_content
+                step_id = content.get("step_id")
+                user_task = content.get("step")
+                operation = content.get("operation")
+                break
         
-        def execute_actions(url: str, actions: dict):
+        for i in range(-1, -len(messages) - 1, -1):
+            if messages[i]["role"] == "Planner":
+                content = json.loads(messages[i]["content"])  
+                details = content.get("details", {})
         
-            if isinstance(actions, str):
-                try:
-                    actions = json5.loads(actions)
-                except Exception as e:
-                    return f"Failed to parse actions: {e}\n{traceback.format_exc()}"
+                if "url" in details:
+                    url = details["url"]
+                if "text" in details:
+                    fill_text = details["text"]
         
-            try:
-                for step in actions.get("actions", []):
-                    try:
-                        print("gone")
-                        controller.perform_action(step,url)
-                    except Exception as e:
-                        return f"Error while performing action {step}:\n{traceback.format_exc()}"
-        
-                return "All actions executed"
-            except Exception as e:
-                return f"Unexpected error:\n{traceback.format_exc()}"
+                break  
 
-        feedback=execute_actions(url,actions)
-        if feedback=="All actions executed":
-            success_fb=True
-            Error_fb=False
+        if operation=="navigate" and initial_navigate==True :
+            controller.goto(url)
+            controller.accesibility_tree()
+            # browser.close()
+
+            executor_feedback={
+                "success_status":True,
+                "error":False,
+                "step_id":step_id,
+                "updated_url":url
+            }
+
+            initial_navigate=False
+            return True, {"role": agent.name, "content": executor_feedback}
+    
+        if operation == "navigate" and initial_navigate == False:
+            print("In extract links part-- ")
+  
+        if extract_links and count < len(extract_links):
+            print("count:", count)
+            new_link = extract_links[count]["link"]
+            print("new link:", new_link)
+            count += 1
+    
+            controller.goto(new_link)
+            controller.accesibility_tree()
+    
+            executor_feedback = {
+                "success_status": True,
+                "error": False,
+                "step_id": step_id,
+                "updated_url": new_link
+            }
+            return True, {"role": agent.name, "content": executor_feedback}
         else:
-            success_fb=False
-            Error_fb=feedback
-        
-        controller.accesibility_tree()
-        
-        next_url=controller.get_url()
-        controller.get_ss("Sera--Smart-Search-Assistant/post_ss.png")
-        # controller.close()
-        # print("here")
+            print("No more links left in extract_links.")
 
-        if inner_list:
-          if first_time==False:
-            extract.append(inner_list.copy())
 
-        if inner_list:
-            if first_time:
-                first_time = False
-                extract_links = inner_list.copy()  
-                print("extracted search results and not displaying in extract")
-                # print(extract_links)
-                
-        
+        if fill_text!="":
+            user_task=user_task + f"with text to type as {fill_text}"
+    
+        try:
+            # print("started")
+            cfg = config["config_list"][0]
 
-        executor_feedback={
-            "step_id":step_id,
-            "success_status":success_fb,
-            "error":Error_fb,
-            # "updated_tree":next_tree,
-            "updated_url":next_url,
-            "extract":extract
-        }
-        inner_list.clear()
-        # print(messages)
-        return True,{
-        "role": agent.name,
-        "content": executor_feedback
-        }
+            client = OpenAI(
+                base_url=cfg["base_url"],   
+                api_key=cfg["api_key"],
+            )
 
-    except Exception as e:
-        return True, {
+            completion = client.chat.completions.create(
+                model=cfg["model"],         
+                messages=[ 
+                        {"role": "system", "content": system_prompt},   
+                        {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
+                ],
+                max_tokens=cfg["max_tokens"]
+            )
+
+            actions = completion.choices[0].message.content
+            _, sep, after = actions.partition("</think>")
+            if sep:  
+                clean_output = after.strip()
+            else:   
+                clean_output = actions.strip()
+            actions=clean_output
+            # print(actions)
+
+            controller.get_ss("Sera--Smart-Search-Assistant/pre_ss.png")
+            
+            def execute_actions(url: str, actions: dict):
+            
+                if isinstance(actions, str):
+                    try:
+                        actions = json5.loads(actions)
+                    except Exception as e:
+                        return f"Failed to parse actions: {e}\n{traceback.format_exc()}"
+            
+                try:
+                    for step in actions.get("actions", []):
+                        try:
+                            print("gone")
+                            controller.perform_action(step,url)
+                        except Exception as e:
+                            return f"Error while performing action {step}:\n{traceback.format_exc()}"
+            
+                    return "All actions executed"
+                except Exception as e:
+                    return f"Unexpected error:\n{traceback.format_exc()}"
+
+            feedback=execute_actions(url,actions)
+            if feedback=="All actions executed":
+                success_fb=True
+                Error_fb=False
+            else:
+                success_fb=False
+                Error_fb=feedback
+            
+            controller.accesibility_tree()
+            
+            next_url=controller.get_url()
+            controller.get_ss("Sera--Smart-Search-Assistant/post_ss.png")
+            # controller.close()
+            # print("here")
+
+            if inner_list:
+                if first_time==False:
+                    extract.append(inner_list.copy())
+
+            if inner_list:
+                if first_time:
+                    first_time = False
+                    extract_links = inner_list.copy()  
+                    print("extracted search results and not displaying in extract")
+                    # print(extract_links)
+                    
+            
+
+            executor_feedback={
+                "step_id":step_id,
+                "success_status":success_fb,
+                "error":Error_fb,
+                # "updated_tree":next_tree,
+                "updated_url":next_url,
+                "extract":extract
+            }
+            inner_list.clear()
+            # print(messages)
+            return True,{
             "role": agent.name,
-            "content": f"Executor generate failed: {e}\n{traceback.format_exc()}"
-        }
+            "content": executor_feedback
+            }
 
+        except Exception as e:
+            return True, {
+                "role": agent.name,
+                "content": f"Executor generate failed: {e}\n{traceback.format_exc()}"
+            }
+    finally:
+            controller.close()    
 import os
 Executor = AssistantAgent(
     name="Executor",
