@@ -1049,7 +1049,7 @@ def custom_generate(agent, messages, sender, config):
         supervisor_msg=messages[i]["content"]
         supervisor_msg=str(supervisor_msg)
         # supervisor_msg="success: "+supervisor_msg
-        print(supervisor_msg)
+        # print(supervisor_msg)
         break
 
       
