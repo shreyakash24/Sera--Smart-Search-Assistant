@@ -339,7 +339,13 @@ def executor_generate(agent, messages, sender, config):
         )
 
         actions = completion.choices[0].message.content
-        print(actions)
+        _, sep, after = actions.partition("</think>")
+        if sep:  
+            clean_output = after.strip()
+        else:   
+            clean_output = actions.strip()
+        actions=clean_output
+        # print(actions)
 
         controller.get_ss("pre_ss.png")
         
@@ -385,9 +391,9 @@ def executor_generate(agent, messages, sender, config):
         if inner_list:
             if first_time:
                 first_time = False
-                extract_links = inner_list.copy()   # now extract_links is a list-of-dicts (not [[...]])
+                extract_links = inner_list.copy()  
                 print("extracted search results and not displaying in extract")
-                print(extract_links)
+                # print(extract_links)
                 
         
 
@@ -418,7 +424,7 @@ Executor = AssistantAgent(
     llm_config= {
     "config_list": [
         {
-            "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",  
+            "model": "qwen/qwen3-235b-a22b:free",  
             "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1",
             "max_tokens": 30000
@@ -432,4 +438,5 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config # Pass the config here
 )
+
 
