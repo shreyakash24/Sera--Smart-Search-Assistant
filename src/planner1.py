@@ -1171,7 +1171,7 @@ planner_llm_config=planner.llm_config
 planner.register_reply(
     trigger=lambda sender: True,
     reply_func=custom_generate,
-    config=planner_llm_config # Pass the config here
+    config=planner_llm_config 
 )
 
 

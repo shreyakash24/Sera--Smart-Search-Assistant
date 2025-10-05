@@ -185,12 +185,12 @@ Supervisor = AssistantAgent(
             {
                 "model": "google/gemma-3-27b-it:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": os.environ.get("ROUT2")
+                "api_key": os.environ.get("ROUT")
             },
             {
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": os.environ.get("ROUT3")
+                "api_key": os.environ.get("ROUT")
             }
         ]
     }
