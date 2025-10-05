@@ -3,6 +3,13 @@ from playwright.sync_api import sync_playwright
 from openai import OpenAI
 import json,json5
 import traceback
+from dotenv import load_dotenv
+import os,json
+import google.generativeai as genai
+
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=api_key)
 
 system_prompt='''You are a DOM selector extraction assistant. 
 
@@ -47,7 +54,7 @@ operation to perform and which element to target.
 -ALWAYS RETURN A VALID JSON STRUCTURE.
 -NEVER OMIT OR CUT OFF A FIELD.
 -DO NOT TRUNCATE THE LINK VALUE OR NAME.
--Also if link is a role provide it's value too which is a link.
+-ALSO IF LINK IS A ROLE PROVIDE IT'S VALUE TOO WHICH IS A LINK.(ALWAYS)
 -DO NOT OUTPUT YOUR THINKING ,OR ANY EXTRA PART EXCEPT THE STRUCTURED JSON OUTPUT.
 
 -Return structured output
@@ -73,9 +80,11 @@ VeryIMP:The selected action should not contain role as 'text leaf' as it cannot 
         else for interaction u should look for 'textbox' instead. For elements with almost same name and meaning having both textleaf and textbox ,always select the textbox. 
 IMP: If the selected action contains interacting with text leaf always prioritize textbox first ,if textbox not present do interact using textleaf*
 
-Always output in proper JSON format only ,so it can be used afterwards using json.loads().
-Strictly follow this format only in JSON,giving a list of actions always*even if an individual action.
-The value key if there should be outside target key not in target as specified .
+-THE BELOW FORMAT MUST NOT BE BROKEN BY ANY CHANCE
+-Always output in proper JSON format only ,so it can be used afterwards using json.loads().
+-DO NOT GIVE RESPONSE WITH back ticks (``` json ).
+-Strictly follow this format only in JSON,giving a list of actions always*even if an individual action.
+-THE VALUE KEY IF PRESENT IT SHOULD NOT BE NESTED IN TARGET KEY BUT AS A SEPERATE KEY OUTSIDE TARGET AS SPECIFIED IN FORMAT.
 Format:
  {
   "actions":[
@@ -224,7 +233,7 @@ class BrowserController:
   def accesibility_tree(self):
       snapshot =  self.page.accessibility.snapshot()
       
-      with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "w", encoding="utf-8") as f:
+      with open("accessibility_tree.json", "w", encoding="utf-8") as f:
           json.dump(snapshot, f, ensure_ascii=False, indent=1)
   
   def get_url(self):
@@ -250,7 +259,7 @@ def executor_generate(agent, messages, sender, config):
 
     for i in range(-1,-len(messages)-1,-1):
       if messages[i]["role"]=="Executor":
-        with open("Sera--Smart-Search-Assistant/src/accessibility_tree.json", "r", encoding="utf-8") as f:
+        with open("accessibility_tree.json", "r", encoding="utf-8") as f:
             accessibility_tree = json.load(f)
         url=messages[i]["content"]["updated_url"]
         break
@@ -322,36 +331,52 @@ def executor_generate(agent, messages, sender, config):
     
     try:
         # print("started")
-        cfg = config["config_list"][0]
+        # cfg = config["config_list"][0]
 
-        client = OpenAI(
-            base_url=cfg["base_url"],   
-            api_key=cfg["api_key"],
-        )
+        # client = OpenAI(
+        #     base_url=cfg["base_url"],   
+        #     api_key=cfg["api_key"],
+        # )
 
-        completion = client.chat.completions.create(
-            model=cfg["model"],         
-            messages=[ 
-                    {"role": "system", "content": system_prompt},   
-                    {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
-            ],
-            max_tokens=cfg["max_tokens"]
-        )
+        # completion = client.chat.completions.create(
+        #     model=cfg["model"],         
+        #     messages=[ 
+        #             {"role": "system", "content": system_prompt},   
+        #             {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
+        #     ],
+        #     max_tokens=cfg["max_tokens"]
+        # )
 
-        actions = completion.choices[0].message.content
-        _, sep, after = actions.partition("</think>")
-        if sep:  
-            clean_output = after.strip()
-        else:   
-            clean_output = actions.strip()
-        actions=clean_output
+        # actions = completion.choices[0].message.content
+        # _, sep, after = actions.partition("</think>")
+        # if sep:  
+        #     clean_output = after.strip()
+        # else:   
+        #     clean_output = actions.strip()
+        # actions=clean_output
         # print(actions)
+        model = genai.GenerativeModel('gemini-2.5-flash') 
 
-        controller.get_ss("Sera--Smart-Search-Assistant/pre_ss.png")
+        response = model.generate_content(
+            [
+                system_prompt,
+                f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"
+            ]
+        )
+        actions=response.text
+        actions = actions.strip()
+        if actions.startswith("```"):
+            actions = actions.split("```")[1]  # take inside block
+        if actions.startswith("json"):
+            actions = actions[4:].strip()
+        print(actions)
+
+        controller.get_ss("pre_ss.png")
         
         def execute_actions(url: str, actions: dict):
         
             if isinstance(actions, str):
+                
                 try:
                     actions = json5.loads(actions)
                 except Exception as e:
@@ -380,7 +405,7 @@ def executor_generate(agent, messages, sender, config):
         controller.accesibility_tree()
         
         next_url=controller.get_url()
-        controller.get_ss("Sera--Smart-Search-Assistant/post_ss.png")
+        controller.get_ss("post_ss.png")
         # controller.close()
         # print("here")
 
@@ -391,9 +416,9 @@ def executor_generate(agent, messages, sender, config):
         if inner_list:
             if first_time:
                 first_time = False
-                extract_links = inner_list.copy()  
+                extract_links = inner_list.copy()   # now extract_links is a list-of-dicts (not [[...]])
                 print("extracted search results and not displaying in extract")
-                # print(extract_links)
+                print(extract_links)
                 
         
 
@@ -418,16 +443,16 @@ def executor_generate(agent, messages, sender, config):
             "content": f"Executor generate failed: {e}\n{traceback.format_exc()}"
         }
 
-import os
+
 Executor = AssistantAgent(
     name="Executor",
     llm_config= {
     "config_list": [
         {
             "model": "qwen/qwen3-235b-a22b:free",  
-            "api_key": "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",
+            "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1",
-            "max_tokens": 30000
+            "max_tokens": 15000
         }
     ]
     }
@@ -438,5 +463,14 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config # Pass the config here
 )
-
-
+# Search for pendrive with usb3.2 256gb storage
+# https://www.amazon.in/
+# messages=[]
+# planner_output= {"step_id": 2, "step": "Search for pendrive with usb3.2 256gb storage", "operation": "search", "target": "Indigo main page"}
+# planner_output=json.dumps(planner_output)
+# user_input = input("Enter your task: ")
+# messages.append({"role": "user", "content": user_input})
+# messages.append({"role":"Planner","content":planner_output})
+# messages.append({'role': 'Executor', 'content': {'success_status': True, 'error': False, 'step_id': 1, 'updated_url': 'https://www.amazon.in/'}})
+# executor_output = executor.generate_reply(messages)
+# print(executor_output)
