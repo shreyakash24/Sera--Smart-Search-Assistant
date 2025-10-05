@@ -29,14 +29,14 @@ def main():
         if  supervisor_feedback["content"]["is_terminate"]:
             break
     
-    final_ans=""
-    for i in range(-1,-len(messages)-1,-1):
-      if messages[i]["role"]=="Executor":
-        extracted_ans=messages[i]["content"]["extract"]
-        break
-    for ans in extracted_ans:
-       final_ans+=ans["name"]+" "
-    print("Desired answer:",final_ans)
+    # final_ans=""
+    # for i in range(-1,-len(messages)-1,-1):
+    #   if messages[i]["role"]=="Executor":
+    #     extracted_ans=messages[i]["content"]["extract"]
+    #     break
+    # for ans in extracted_ans:
+    #    final_ans+=ans["name"]+" "
+    # print("Desired answer:",final_ans)
 # FInd cheapest flight from mumbai to delhi for 2 adults on 5th september from ixigo site
 if __name__ == "__main__":
     main()
