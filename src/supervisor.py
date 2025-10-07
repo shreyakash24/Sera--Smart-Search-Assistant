@@ -62,13 +62,14 @@ Don't output anything else than this format.
       "expected": "<What should have happened>",
       "actual": "<What actually happened>"
   },
-  "is_terminate":true/false<user task completed or no>
+  "is_terminate":True/False<user task completed or no>
 }
 
 ## Important Rules
 - If the action did produce the expected outcome and if there are slight considerable changes wrt the action performed, mark `"success": true`. 
 - For subtask like extracting,reading from a webpage would have no change in UI so always give "success":True,but only terminate  if the main user task was completed or no,after extraction or reading?
-- Be objective. Do not assume success unless the evidence clearly supports it.  
+- Be objective. Do not assume success unless the evidence clearly supports it.
+- If the action was to 
 - Use precise reasoning, not vague statements.  
 - Keep reasoning concise but logical. 
 - Stick to the output format strictly dont output anything extra than the json output format explicitly mentioned.
@@ -96,8 +97,7 @@ def analyze_image(image_path, prompt):
     # )
     # return completion.choices[0].message.content
     model = genai.GenerativeModel(
-        model_name='gemini-2.5-flash-lite',
-        system_instruction=sys_prompt
+        model_name='gemini-2.5-flash-lite'
     )
     prompt_parts = [
         prompt,
@@ -152,19 +152,19 @@ def supervisor_generate(agent, messages, sender, config):
     all_actions.reverse()
 
     # v_cfg = config["config_list"][0]
-    t_cfg = config["config_list"][1]
+    # t_cfg = config["config_list"][1]
 
-    # v_client = OpenAI(
-    #         base_url=v_cfg["base_url"],   
-    #         api_key=v_cfg["api_key"],
+    # # v_client = OpenAI(
+    # #         base_url=v_cfg["base_url"],   
+    # #         api_key=v_cfg["api_key"],
+    # #     )
+    # t_client = OpenAI(
+    #         base_url=t_cfg["base_url"],   
+    #         api_key=t_cfg["api_key"],
     #     )
-    t_client = OpenAI(
-            base_url=t_cfg["base_url"],   
-            api_key=t_cfg["api_key"],
-        )
     
-    # v_model=v_cfg["model"]
-    t_model=t_cfg["model"]
+    # # v_model=v_cfg["model"]
+    # t_model=t_cfg["model"]
 
     # image1 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\pre_ss.png"
     # image2 = r"C:\Users\tanmay\OneDrive\Desktop\Autogen\post_ss.png"
@@ -175,7 +175,7 @@ def supervisor_generate(agent, messages, sender, config):
     post_image="post_ss.png"
     
     prompt1 = "List all interactive elements visible on this webpage screenshot with the possible actions after interacting with them can led to."
-    prompt2 = "Summarize this page what it is about and what all element it contains"
+    prompt2 = "Summarize this page what it is about and detail about all element visible in UI"
 
     img1 = Image.open(pre_image)
     img2 = Image.open(post_image)
@@ -194,15 +194,33 @@ def supervisor_generate(agent, messages, sender, config):
         "user_task":user_task
     }
 
-    completion = t_client.chat.completions.create(
-        model=t_model,
-        messages=[
-            {"role": "system", "content": sys_prompt},
-            {"role": "user","content":str(user_input)}
-        ]
+    # completion = t_client.chat.completions.create(
+    #     model=t_model,
+    #     messages=[
+    #         {"role": "system", "content": sys_prompt},
+    #         {"role": "user","content":str(user_input)}
+    #     ]
+    # )
+    # feedback=completion.choices[0].message.content
+    model = genai.GenerativeModel('gemini-2.5-flash') 
+
+    response = model.generate_content(
+        [
+            sys_prompt,
+            f"{user_input}"
+        ],
+        generation_config=genai.types.GenerationConfig(
+            max_output_tokens=15000
+        )
     )
-    feedback=completion.choices[0].message.content
-    dict_feedback = json.loads(feedback.replace('\\', '\\\\'))
+    feedback=response.text
+    feedback = feedback.strip()
+    if feedback.startswith("```"):
+        feedback = feedback.split("```")[1]  
+    if feedback.startswith("json"):
+        feedback = feedback[4:].strip()
+
+    dict_feedback = json.loads(feedback)
 
     messages.append({
         "role": agent.name,
@@ -225,7 +243,7 @@ Supervisor = AssistantAgent(
             {
                 "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
                 "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "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"
+                "api_key": "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"
             }
         ]
     }
@@ -237,3 +255,4 @@ Supervisor.register_reply(
     reply_func=supervisor_generate,
     config=supervisor_llm_config # Pass the config here
 )
+
