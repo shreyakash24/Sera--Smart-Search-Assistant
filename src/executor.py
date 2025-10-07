@@ -165,7 +165,7 @@ initial_navigate=True
 class BrowserController:
   def __init__(self):
       self.playwright = sync_playwright().start()
-      self.browser = self.playwright.firefox.launch(headless=False)
+      self.browser = self.playwright.firefox.launch(headless=True)
       self.context =  self.browser.new_context()
       self.page = self.context.new_page()
 
@@ -348,7 +348,7 @@ def executor_generate(agent, messages, sender, config):
             actions=clean_output
             # print(actions)
 
-            controller.get_ss("Sera--Smart-Search-Assistant/pre_ss.png")
+            controller.get_ss("pre_ss.png")
             
             def execute_actions(url: str, actions: dict):
             
@@ -381,7 +381,7 @@ def executor_generate(agent, messages, sender, config):
             controller.accesibility_tree()
             
             next_url=controller.get_url()
-            controller.get_ss("Sera--Smart-Search-Assistant/post_ss.png")
+            controller.get_ss("post_ss.png")
             # controller.close()
             # print("here")
 
