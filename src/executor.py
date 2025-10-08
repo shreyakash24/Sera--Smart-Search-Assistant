@@ -614,6 +614,7 @@ inner_list=[]
 extract_links=[]
 count=0
 first_time=True
+single_website=True
 initial_navigate=True
 class BrowserController:
   def __init__(self):
@@ -696,7 +697,7 @@ class BrowserController:
 controller = BrowserController()
 
 def executor_generate(agent, messages, sender, config):
-    global initial_navigate,count,first_time,extract,inner_list,extract_links
+    global initial_navigate,count,first_time,extract,inner_list,extract_links,single_website
     user_task=""
     accessibility_tree=""
     url=""
@@ -745,7 +746,8 @@ def executor_generate(agent, messages, sender, config):
         "error":False,
         "step_id":step_id,
         "updated_url":url,
-        "terminate":False
+        "terminate":False,
+        "extract":extract
        }
 
        initial_navigate=False
@@ -872,7 +874,7 @@ def executor_generate(agent, messages, sender, config):
         # print("here")
 
         if inner_list:
-          if first_time==False:
+          if first_time==False or single_website==True:
             extract.append(inner_list.copy())
 
         if inner_list:
@@ -926,6 +928,4 @@ Executor.register_reply(
     reply_func=executor_generate,
     config=executor_llm_config 
 )
-
-
 
