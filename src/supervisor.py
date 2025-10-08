@@ -40,8 +40,10 @@ You will always receive the input in this JSON-like format:
 
 ## Task
 1. Read the `action` to understand what was supposed to happen.
+2. If the intended action was to increase the no of adults or children in passengers section alway mark it as success as the UI would show the old one only.
 2. If the action as to read or extract always give succes status as true since there would be no changes in Ui. 
-2. Compare `pre_state` and `post_state` carefully.  
+2. Compare `pre_state` and `post_state` carefully.
+   - Look for the intended task and see the changes for it accordingly, like if it was to increase adult count in flight search the default will show some passengers but look for change in adult count element not the general passenger count.  
    - Look for the expected change (e.g., new popup,change in UI, form submitted, error message,navigated to new page,only change in current page by typing some information in input or slection of any elements).  
    - Look for missing or incorrect changes.
    - Sometimes the action is just to type something,clicking something or fill the details in the same page.
@@ -120,6 +122,11 @@ def supervisor_generate(agent, messages, sender, config):
         operation=content["operation"]
         break
     
+    for i in range(-1,-len(messages)-1,-1):
+      if messages[i]["role"]=="Executor":
+        extracted=messages[i]["content"]["extract"]
+        break
+    
     if operation=="navigate":
        sup_feedback={
           "success": True,
@@ -138,7 +145,26 @@ def supervisor_generate(agent, messages, sender, config):
         "role": agent.name,
         "content": sup_feedback
         }
-       
+    
+    if operation=="extract":
+       if not extracted:
+          sup_feedback={
+            "success": False,
+            "reasoning": "The extraction didnt take place ",
+            "expected_vs_actual": {
+                "expected": "It should extract the required elements in subtask specified",
+                "actual": "Could not extract as it didn't had a correct plan before extraction ,which lead to incomplete extraction ,modify the plan before extraction such that there are elements to extract"
+            },
+            "is_terminate":False
+          }
+          messages.append({
+           "role": agent.name,
+           "content": sup_feedback
+          })
+          return True,{
+           "role": agent.name,
+           "content": sup_feedback
+           }
 
     all_actions=[]
     for i in range(-1,-len(messages)-1,-1):
