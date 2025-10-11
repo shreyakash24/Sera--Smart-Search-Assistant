@@ -180,20 +180,10 @@ single_website=True
 initial_navigate=True
 class BrowserController:
   def __init__(self):
-        self.playwright = None
-        self.browser = None
-
-  def start(self):
-      if not self.playwright:
-          self.playwright = sync_playwright().start()
-          self.browser = self.playwright.firefox.launch(headless=False)
-          self.context =  self.browser.new_context()
-          self.page = self.context.new_page()
-#   def __init__(self):
-#       self.playwright = sync_playwright().start()
-#       self.browser = self.playwright.firefox.launch(headless=False)
-#       self.context =  self.browser.new_context()
-#       self.page = self.context.new_page()
+      self.playwright = sync_playwright().start()
+      self.browser = self.playwright.firefox.launch(headless=False)
+      self.context =  self.browser.new_context()
+      self.page = self.context.new_page()
 
   def goto(self, url: str):
       self.page.goto(url,wait_until="load")
@@ -287,7 +277,6 @@ class BrowserController:
       self.playwright.stop()
 
 controller = BrowserController()
-controller.start()
 
 def executor_generate(agent, messages, sender, config):
     global initial_navigate,count,first_time,extract,inner_list,extract_links,single_website
@@ -395,31 +384,7 @@ def executor_generate(agent, messages, sender, config):
        user_task=user_task + f"with text to type as {fill_text}"
     
     try:
-        # print("started")
-        # cfg = config["config_list"][0]
-
-        # client = OpenAI(
-        #     base_url=cfg["base_url"],   
-        #     api_key=cfg["api_key"],
-        # )
-
-        # completion = client.chat.completions.create(
-        #     model=cfg["model"],         
-        #     messages=[ 
-        #             {"role": "system", "content": system_prompt},   
-        #             {"role": "user","content": f"User Task: {user_task}\nDOM:\n{json.dumps(accessibility_tree, ensure_ascii=False)}\n\nOutput:"}
-        #     ],
-        #     max_tokens=cfg["max_tokens"]
-        # )
-
-        # actions = completion.choices[0].message.content
-        # _, sep, after = actions.partition("</think>")
-        # if sep:  
-        #     clean_output = after.strip()
-        # else:   
-        #     clean_output = actions.strip()
-        # actions=clean_output
-        # print(actions)
+        
         model = genai.GenerativeModel('gemini-2.5-flash') 
 
         response = model.generate_content(
