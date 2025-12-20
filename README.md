@@ -1,5 +1,5 @@
 # Sera--Smart-Search-Assistant  
-> About The Project   
+> ### About The Project   
 Sera(Smart Search Assistant) is an intelligent agentic web navigation system designed to autonomously perform human-like web browsing behaviors based on natural language goals. It can search, read, click, scroll, and complete structured tasks across arbitrary websites with changing layouts and DOM structures. Leveraging modular design principles, Sera combines advanced Large Language Models (LLMs) for task planning with DOM-aware execution modules and browser automation to provide a transparent, interpretable, and deployable solution for automating complex web tasks.
 Users can input queries via text to issue web search queries or task instructions naturally. The system processes and seamlessly integrates the commands into the planning and execution pipeline.  
   
