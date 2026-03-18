@@ -1,0 +1,4 @@
+autogen
+playwright
+chromium
+streamlit
