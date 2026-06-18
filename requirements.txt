@@ -1,4 +1,8 @@
-autogen
+pyautogen
 playwright
-chromium
 streamlit
+python-dotenv
+google-generativeai
+Pillow
+json5
+requests
